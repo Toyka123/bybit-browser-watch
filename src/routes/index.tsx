@@ -23,6 +23,14 @@ type Conn = { status: "idle" | "checking" | "ok" | "error"; latency?: number; er
 const field = "h-11 w-full rounded-lg border border-input bg-muted px-4 font-mono text-foreground outline-none focus:border-primary";
 const label = "mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 const SIGNAL_TTL = 40000;
+const tfMs = (tf: string) => (Number(TIMEFRAMES[tf]) || 5) * 60000;
+const fmtLeft = (ms: number) => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  if (s < 60) return `${s}с`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}м`;
+  return `${Math.floor(m / 60)}ч ${m % 60}м`;
+};
 
 function Index() {
   const [mode, setMode] = useState<Mode>("demo");
@@ -123,7 +131,7 @@ function Index() {
   useEffect(() => {
     const t = setInterval(() => {
       const now = Date.now();
-      setSignals((list) => list.filter((x) => now - x.time < SIGNAL_TTL));
+      setSignals((list) => list.filter((x) => now - x.time < SIGNAL_TTL + tfMs(x.tf)));
     }, 1000);
     return () => clearInterval(t);
   }, []);
@@ -224,14 +232,21 @@ function Index() {
 
         {signals.length > 0 && (
           <div className="flex flex-wrap gap-3">
-            {signals.map((x) => (
-              <button key={x.id} onClick={() => setSel(x.id)} className={`flex items-center gap-2 rounded-lg border bg-card px-3 py-2 font-mono text-xs font-semibold ${cur?.id === x.id ? "border-primary/60" : ""} ${x.status === "sl" || x.status === "tp2" ? "opacity-50" : ""}`}>
-                {pair(x.sym)}
-                <span className={`rounded px-1.5 py-0.5 ${x.side === "LONG" ? "bg-long/15 text-long" : "bg-short/15 text-short"}`}>{x.side}</span>
-                <span className="text-muted-foreground">{x.tf}</span>
-                <span className={`rounded px-1.5 py-0.5 font-mono ${x.status === "open" ? (SIGNAL_TTL - (Date.now() - x.time) <= 10000 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn") : "bg-muted text-muted-foreground"}`}>{x.status === "open" ? `⏱ ${Math.max(0, Math.ceil((SIGNAL_TTL - (Date.now() - x.time)) / 1000))}с` : x.status.toUpperCase()}</span>
-              </button>
-            ))}
+            {signals.map((x) => {
+              const elapsed = Date.now() - x.time;
+              const eLeft = SIGNAL_TTL - elapsed;
+              const closed = x.status === "sl" || x.status === "tp2";
+              return (
+                <button key={x.id} onClick={() => setSel(x.id)} className={`flex items-center gap-2 rounded-lg border bg-card px-3 py-2 font-mono text-xs font-semibold ${cur?.id === x.id ? "border-primary/60" : ""} ${closed ? "opacity-50" : ""}`}>
+                  {pair(x.sym)}
+                  <span className={`rounded px-1.5 py-0.5 ${x.side === "LONG" ? "bg-long/15 text-long" : "bg-short/15 text-short"}`}>{x.side}</span>
+                  <span className="text-muted-foreground">{x.tf}</span>
+                  <span className={`rounded px-1.5 py-0.5 font-mono ${eLeft > 0 && !closed ? (eLeft <= 10000 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn") : closed ? "bg-muted text-muted-foreground" : "bg-info/15 text-info"}`}>
+                    {eLeft > 0 && !closed ? `⏱ ${Math.ceil(eLeft / 1000)}с` : closed ? x.status.toUpperCase() : `◧ ${fmtLeft(SIGNAL_TTL + tfMs(x.tf) - elapsed)}`}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -280,8 +295,11 @@ function Detail({ s }: { s: Signal }) {
   };
   const leftToRight = s.side === "SHORT" ? [...pts] : [...pts].reverse();
   void leftToRight;
-  const mins = Math.round((Date.now() - s.time) / 60000);
-  const leftSec = Math.max(0, Math.ceil((SIGNAL_TTL - (Date.now() - s.time)) / 1000));
+  const elapsed = Date.now() - s.time;
+  const leftMs = SIGNAL_TTL - elapsed;
+  const leftSec = Math.max(0, Math.ceil(leftMs / 1000));
+  const lifeLeft = fmtLeft(SIGNAL_TTL + tfMs(s.tf) - elapsed);
+  const mins = Math.round(elapsed / 60000);
   const statusText = { open: "Открыта", tp1: "TP1 взят · SL в безубыток", tp2: "TP2 взят · закрыта", sl: "Стоп-лосс · закрыта" }[s.status];
   const marks: [string, number, string][] = [["TP2", s.tp2, "text-long"], ["TP1", s.tp1, "text-long"], ["Цена", s.price, "text-info"], ["Вход", s.entry, "text-foreground"], ["SL", s.sl, "text-short"]];
   return (
@@ -299,8 +317,17 @@ function Detail({ s }: { s: Signal }) {
           </div>
           <div className="mt-1 text-xs text-muted-foreground">{s.exchange} · спред {s.spread.toFixed(3)}% · {statusText}</div>
           <div className="mt-2 flex items-center gap-2">
-            <span className={`rounded-md px-2.5 py-1 font-mono text-sm font-bold ${leftSec <= 10 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn"}`}>⏱ {leftSec}с</span>
-            <span className="text-xs text-muted-foreground">на вход в сделку — потом сигнал исчезнет</span>
+            {leftMs > 0 ? (
+              <>
+                <span className={`rounded-md px-2.5 py-1 font-mono text-sm font-bold ${leftSec <= 10 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn"}`}>⏱ {leftSec}с</span>
+                <span className="text-xs text-muted-foreground">на вход в сделку</span>
+              </>
+            ) : (
+              <>
+                <span className="rounded-md px-2.5 py-1 font-mono text-sm font-bold bg-info/15 text-info">◧ {lifeLeft}</span>
+                <span className="text-xs text-muted-foreground">сигнал живёт выбранный таймфрейм ({s.tf}), потом исчезнет</span>
+              </>
+            )}
           </div>
         </div>
         <div className="text-right">
