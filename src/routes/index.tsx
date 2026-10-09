@@ -158,7 +158,7 @@ function Index() {
             </div>
           </div>
 
-          <div className="grid gap-4 border-b py-5 md:grid-cols-[1.4fr_1fr_1fr_1fr_auto]">
+          <div className="grid gap-4 border-b py-5 md:grid-cols-[1.2fr_1fr_1fr_1fr_1fr_auto]">
             <div>
               <div className={label}>Актив</div>
               {autoPick ? (
@@ -174,11 +174,19 @@ function Index() {
             </div>
             <div>
               <div className={label}>Таймфрейм</div>
-              <select className={field} value={tf} onChange={(e) => setTf(e.target.value)}>
-                {Object.keys(TIMEFRAMES).map((t) => <option key={t}>{t}</option>)}
-              </select>
+              {autoTf ? (
+                <div className="rounded-lg border border-primary/50 bg-primary/10 px-4 py-2.5">
+                  <div className="font-semibold text-primary">Авто-выбор</div>
+                  <div className="text-xs text-muted-foreground">Проверяются {Object.keys(TIMEFRAMES).length} таймфреймов, берётся самый сильный сигнал</div>
+                </div>
+              ) : (
+                <select className={field} value={tf} onChange={(e) => setTf(e.target.value)}>
+                  {Object.keys(TIMEFRAMES).map((t) => <option key={t}>{t}</option>)}
+                </select>
+              )}
             </div>
             <Toggle title="Авто-выбор актива" on={autoPick} set={setAutoPick} />
+            <Toggle title="Авто-таймфрейм" on={autoTf} set={setAutoTf} />
             <Toggle title="Авто-мониторинг" on={autoMon} set={setAutoMon} />
             <div className="flex items-end gap-3">
               <button disabled={busy} onClick={() => setRunning(true)} className="h-11 whitespace-nowrap rounded-lg bg-primary px-5 font-semibold text-primary-foreground disabled:opacity-60">
