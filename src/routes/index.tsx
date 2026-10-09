@@ -299,6 +299,12 @@ function Detail({ s }: { s: Signal }) {
             <span>· {mins} мин назад · {s.trend}</span>
           </div>
           <div className="mt-1 text-xs text-muted-foreground">{s.exchange} · спред {s.spread.toFixed(3)}% · {statusText}</div>
+          {s.status === "open" && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className={`rounded-md px-2.5 py-1 font-mono text-sm font-bold ${leftSec <= 10 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn"}`}>⏱ {leftSec}с</span>
+              <span className="text-xs text-muted-foreground">на вход в сделку — потом сигнал исчезнет</span>
+            </div>
+          )}
         </div>
         <div className="text-right">
           <div className="text-xs uppercase text-muted-foreground">Текущая цена</div>
