@@ -232,14 +232,21 @@ function Index() {
 
         {signals.length > 0 && (
           <div className="flex flex-wrap gap-3">
-            {signals.map((x) => (
-              <button key={x.id} onClick={() => setSel(x.id)} className={`flex items-center gap-2 rounded-lg border bg-card px-3 py-2 font-mono text-xs font-semibold ${cur?.id === x.id ? "border-primary/60" : ""} ${x.status === "sl" || x.status === "tp2" ? "opacity-50" : ""}`}>
-                {pair(x.sym)}
-                <span className={`rounded px-1.5 py-0.5 ${x.side === "LONG" ? "bg-long/15 text-long" : "bg-short/15 text-short"}`}>{x.side}</span>
-                <span className="text-muted-foreground">{x.tf}</span>
-                <span className={`rounded px-1.5 py-0.5 font-mono ${x.status === "open" ? (SIGNAL_TTL - (Date.now() - x.time) <= 10000 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn") : "bg-muted text-muted-foreground"}`}>{x.status === "open" ? `⏱ ${Math.max(0, Math.ceil((SIGNAL_TTL - (Date.now() - x.time)) / 1000))}с` : x.status.toUpperCase()}</span>
-              </button>
-            ))}
+            {signals.map((x) => {
+              const elapsed = Date.now() - x.time;
+              const eLeft = SIGNAL_TTL - elapsed;
+              const closed = x.status === "sl" || x.status === "tp2";
+              return (
+                <button key={x.id} onClick={() => setSel(x.id)} className={`flex items-center gap-2 rounded-lg border bg-card px-3 py-2 font-mono text-xs font-semibold ${cur?.id === x.id ? "border-primary/60" : ""} ${closed ? "opacity-50" : ""}`}>
+                  {pair(x.sym)}
+                  <span className={`rounded px-1.5 py-0.5 ${x.side === "LONG" ? "bg-long/15 text-long" : "bg-short/15 text-short"}`}>{x.side}</span>
+                  <span className="text-muted-foreground">{x.tf}</span>
+                  <span className={`rounded px-1.5 py-0.5 font-mono ${eLeft > 0 && !closed ? (eLeft <= 10000 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn") : closed ? "bg-muted text-muted-foreground" : "bg-info/15 text-info"}`}>
+                    {eLeft > 0 && !closed ? `⏱ ${Math.ceil(eLeft / 1000)}с` : closed ? x.status.toUpperCase() : `◧ ${fmtLeft(SIGNAL_TTL + tfMs(x.tf) - elapsed)}`}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
 
