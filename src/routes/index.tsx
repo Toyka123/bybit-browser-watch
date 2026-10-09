@@ -22,6 +22,7 @@ type Conn = { status: "idle" | "checking" | "ok" | "error"; latency?: number; er
 
 const field = "h-11 w-full rounded-lg border border-input bg-muted px-4 font-mono text-foreground outline-none focus:border-primary";
 const label = "mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground";
+const SIGNAL_TTL = 40000;
 
 function Index() {
   const [mode, setMode] = useState<Mode>("demo");
@@ -222,7 +223,7 @@ function Index() {
                 {pair(x.sym)}
                 <span className={`rounded px-1.5 py-0.5 ${x.side === "LONG" ? "bg-long/15 text-long" : "bg-short/15 text-short"}`}>{x.side}</span>
                 <span className="text-muted-foreground">{x.tf}</span>
-                <span className={`rounded px-1.5 py-0.5 ${x.status === "open" ? "bg-warn/15 text-warn" : "bg-muted text-muted-foreground"}`}>{x.status === "open" ? "Открыта" : x.status.toUpperCase()}</span>
+                <span className={`rounded px-1.5 py-0.5 font-mono ${x.status === "open" ? (SIGNAL_TTL - (Date.now() - x.time) <= 10000 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn") : "bg-muted text-muted-foreground"}`}>{x.status === "open" ? `⏱ ${Math.max(0, Math.ceil((SIGNAL_TTL - (Date.now() - x.time)) / 1000))}с` : x.status.toUpperCase()}</span>
               </button>
             ))}
           </div>
@@ -274,6 +275,7 @@ function Detail({ s }: { s: Signal }) {
   const leftToRight = s.side === "SHORT" ? [...pts] : [...pts].reverse();
   void leftToRight;
   const mins = Math.round((Date.now() - s.time) / 60000);
+  const leftSec = Math.max(0, Math.ceil((SIGNAL_TTL - (Date.now() - s.time)) / 1000));
   const statusText = { open: "Открыта", tp1: "TP1 взят · SL в безубыток", tp2: "TP2 взят · закрыта", sl: "Стоп-лосс · закрыта" }[s.status];
   const marks: [string, number, string][] = [["TP2", s.tp2, "text-long"], ["TP1", s.tp1, "text-long"], ["Цена", s.price, "text-info"], ["Вход", s.entry, "text-foreground"], ["SL", s.sl, "text-short"]];
   return (
@@ -290,7 +292,10 @@ function Detail({ s }: { s: Signal }) {
             <span>· {mins} мин назад · {s.trend}</span>
           </div>
           <div className="mt-1 text-xs text-muted-foreground">{s.exchange} · спред {s.spread.toFixed(3)}% · {statusText}</div>
-          <div className="mt-2 text-xs text-muted-foreground">Сигнал остаётся в списке, пока не сработает TP2 или стоп-лосс.</div>
+          <div className="mt-2 flex items-center gap-2">
+            <span className={`rounded-md px-2.5 py-1 font-mono text-sm font-bold ${leftSec <= 10 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn"}`}>⏱ {leftSec}с</span>
+            <span className="text-xs text-muted-foreground">на вход в сделку — потом сигнал исчезнет</span>
+          </div>
         </div>
         <div className="text-right">
           <div className="text-xs uppercase text-muted-foreground">Текущая цена</div>
