@@ -229,7 +229,8 @@ function Index() {
               <button key={x.id} onClick={() => setSel(x.id)} className={`flex items-center gap-2 rounded-lg border bg-card px-3 py-2 font-mono text-xs font-semibold ${cur?.id === x.id ? "border-primary/60" : ""} ${x.status === "sl" || x.status === "tp2" ? "opacity-50" : ""}`}>
                 {pair(x.sym)}
                 <span className={`rounded px-1.5 py-0.5 ${x.side === "LONG" ? "bg-long/15 text-long" : "bg-short/15 text-short"}`}>{x.side}</span>
-                <span className="text-muted-foreground">{x.status === "open" ? x.tf : x.status.toUpperCase()}</span>
+                <span className="text-muted-foreground">{x.tf}</span>
+                <span className={`rounded px-1.5 py-0.5 ${x.status === "open" ? "bg-warn/15 text-warn" : "bg-muted text-muted-foreground"}`}>{x.status === "open" ? `${Math.max(0, Math.ceil((SIGNAL_TTL - (Date.now() - x.time)) / 1000))}с` : x.status.toUpperCase()}</span>
               </button>
             ))}
           </div>
@@ -281,6 +282,7 @@ function Detail({ s }: { s: Signal }) {
   const leftToRight = s.side === "SHORT" ? [...pts] : [...pts].reverse();
   void leftToRight;
   const mins = Math.round((Date.now() - s.time) / 60000);
+  const leftSec = Math.max(0, Math.ceil((SIGNAL_TTL - (Date.now() - s.time)) / 1000));
   const statusText = { open: "Открыта", tp1: "TP1 взят · SL в безубыток", tp2: "TP2 взят · закрыта", sl: "Стоп-лосс · закрыта" }[s.status];
   const marks: [string, number, string][] = [["TP2", s.tp2, "text-long"], ["TP1", s.tp1, "text-long"], ["Цена", s.price, "text-info"], ["Вход", s.entry, "text-foreground"], ["SL", s.sl, "text-short"]];
   return (
