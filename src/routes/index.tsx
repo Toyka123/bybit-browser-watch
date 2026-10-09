@@ -299,6 +299,7 @@ function Detail({ s }: { s: Signal }) {
   const leftMs = SIGNAL_TTL - elapsed;
   const leftSec = Math.max(0, Math.ceil(leftMs / 1000));
   const lifeLeft = fmtLeft(SIGNAL_TTL + tfMs(s.tf) - elapsed);
+  const mins = Math.round(elapsed / 60000);
   const statusText = { open: "Открыта", tp1: "TP1 взят · SL в безубыток", tp2: "TP2 взят · закрыта", sl: "Стоп-лосс · закрыта" }[s.status];
   const marks: [string, number, string][] = [["TP2", s.tp2, "text-long"], ["TP1", s.tp1, "text-long"], ["Цена", s.price, "text-info"], ["Вход", s.entry, "text-foreground"], ["SL", s.sl, "text-short"]];
   return (
