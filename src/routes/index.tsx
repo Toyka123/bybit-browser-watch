@@ -131,7 +131,7 @@ function Index() {
   useEffect(() => {
     const t = setInterval(() => {
       const now = Date.now();
-      setSignals((list) => list.filter((x) => now - x.time < SIGNAL_TTL));
+      setSignals((list) => list.filter((x) => now - x.time < SIGNAL_TTL + tfMs(x.tf)));
     }, 1000);
     return () => clearInterval(t);
   }, []);
