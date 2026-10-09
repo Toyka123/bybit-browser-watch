@@ -26,7 +26,7 @@ export async function fetchCandles(mode: Mode, sym: string, tf: string, limit = 
   const j = await r.json();
   if (j.retCode !== 0) throw new Error(j.retMsg);
   return (j.result.list as string[][])
-    .map((k) => ({ t: +k[0], o: +k[1], h: +k[2], l: +k[3], c: +k[4] }))
+    .map((k) => ({ t: +k[0]!, o: +k[1]!, h: +k[2]!, l: +k[3]!, c: +k[4]! }))
     .reverse();
 }
 
@@ -50,7 +50,7 @@ function hash(n: number) {
 }
 
 function demoCandles(sym: string, tf: string, limit: number): Candle[] {
-  const step = TF_MS[tf];
+  const step = TF_MS[tf] ?? 3e5;
   const now = Math.floor(Date.now() / step) * step;
   const seed = sym.split("").reduce((a, ch) => a + ch.charCodeAt(0) * 31, 0);
   const out: Candle[] = [];
@@ -70,14 +70,14 @@ function demoCandles(sym: string, tf: string, limit: number): Candle[] {
 export function ema(v: number[], n: number) {
   const k = 2 / (n + 1);
   const out: number[] = [];
-  v.forEach((x, i) => out.push(i === 0 ? x : x * k + out[i - 1] * (1 - k)));
+  v.forEach((x, i) => out.push(i === 0 ? x : x * k + out[i - 1]! * (1 - k)));
   return out;
 }
 
 export function rsi(v: number[], n: number) {
   let g = 0, l = 0;
   for (let i = v.length - n; i < v.length; i++) {
-    const d = v[i] - v[i - 1];
+    const d = v[i]! - v[i - 1]!;
     if (d > 0) g += d; else l -= d;
   }
   return l === 0 ? 100 : 100 - 100 / (1 + g / l);
@@ -85,7 +85,7 @@ export function rsi(v: number[], n: number) {
 
 export function atr(c: Candle[], n = 14) {
   let s = 0;
-  for (let i = c.length - n; i < c.length; i++) s += Math.max(c[i].h - c[i].l, Math.abs(c[i].h - c[i - 1].c), Math.abs(c[i].l - c[i - 1].c));
+  for (let i = c.length - n; i < c.length; i++) s += Math.max(c[i]!.h - c[i]!.l, Math.abs(c[i]!.h - c[i - 1]!.c), Math.abs(c[i]!.l - c[i - 1]!.c));
   return s / n;
 }
 

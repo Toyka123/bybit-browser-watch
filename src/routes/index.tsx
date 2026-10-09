@@ -81,7 +81,7 @@ function Index() {
     }));
     setScanned(n);
     setFound((x) => x + f);
-    if (fresh.length) { setSignals((x) => [...x, ...fresh]); setSel((cur) => cur ?? fresh[0].id); }
+    if (fresh.length) { setSignals((x) => [...x, ...fresh]); setSel((cur) => cur ?? fresh[0]!.id); }
     setLog(`Скан ${new Date().toLocaleTimeString("ru")}: ${n} монет, ${f} новых сигналов (${s.mode === "live" ? "Bybit" : "демо"})`);
     setBusy(false);
   }
