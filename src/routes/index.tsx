@@ -120,7 +120,13 @@ function Index() {
     if (newSl) setSls((v) => [...v, ...Array(newSl).fill(Date.now())]);
   }
 
-
+  useEffect(() => {
+    const t = setInterval(() => {
+      const now = Date.now();
+      setSignals((list) => list.filter((x) => now - x.time < SIGNAL_TTL));
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
   useEffect(() => {
     if (!running) return;
     scan();
