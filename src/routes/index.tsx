@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { analyze, checkBybit, fetchCandles, fetchTicker, fmt, pair, SYMBOLS, TIMEFRAMES, type Candle, type Mode, type Params } from "@/lib/market";
+import { analyze, atr, checkBybit, fetchCandles, fetchTicker, fmt, pair, SYMBOLS, TIMEFRAMES, type Candle, type Mode, type Params } from "@/lib/market";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,6 +29,7 @@ function Index() {
   const [asset, setAsset] = useState("BTC");
   const [tf, setTf] = useState("5m");
   const [autoPick, setAutoPick] = useState(true);
+  const [autoTf, setAutoTf] = useState(true);
   const [autoMon, setAutoMon] = useState(true);
   const [p, setP] = useState<Params>({ risk: 1, leverage: 5, ema1: 9, ema2: 21, rsi: 14 });
   const [running, setRunning] = useState(false);
