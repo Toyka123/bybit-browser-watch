@@ -41,8 +41,8 @@ function Index() {
   const [sls, setSls] = useState<number[]>([]);
   const [log, setLog] = useState<string>("");
 
-  const st = useRef({ mode, tf, p, autoPick, asset, signals, sls });
-  st.current = { mode, tf, p, autoPick, asset, signals, sls };
+  const st = useRef({ mode, tf, p, autoPick, autoTf, asset, signals, sls });
+  st.current = { mode, tf, p, autoPick, autoTf, asset, signals, sls };
   const exchange = mode === "live" ? "BYBIT" : "DEMO";
   const sl24 = sls.filter((t) => Date.now() - t < 864e5).length;
 
@@ -68,16 +68,23 @@ function Index() {
     const fresh: Signal[] = [];
     await Promise.all(list.map(async (sym) => {
       try {
-        const c = await fetchCandles(s.mode, sym, s.tf);
-        n++;
         if (s.signals.some((x) => x.sym === sym && (x.status === "open" || x.status === "tp1"))) return;
-        const a = analyze(c, s.p);
-        if (!a.side) return;
+        n++;
+        const tfs = s.autoTf ? Object.keys(TIMEFRAMES) : [s.tf];
+        let best: { a: ReturnType<typeof analyze>; tf: string; c: Candle[]; score: number } | null = null;
+        for (const tf of tfs) {
+          const c = await fetchCandles(s.mode, sym, tf);
+          const a = analyze(c, s.p);
+          if (!a.side) continue;
+          const score = Math.abs(a.rsi - 50) + Math.abs(a.emaF.at(-1)! - a.emaS.at(-1)!) / (atr(c) || 1);
+          if (!best || score > best.score) best = { a, tf, c, score };
+        }
+        if (!best) return;
         const t = await fetchTicker(s.mode, sym);
         const spread = ((t.ask - t.bid) / t.last) * 100;
         if (spread > 0.1) return;
         f++;
-        fresh.push({ id: `${sym}-${Date.now()}`, sym, side: a.side, tf: s.tf, entry: a.entry, sl: a.sl, tp1: a.tp1, tp2: a.tp2, price: t.last, spread, time: Date.now(), trend: a.trend, status: "open", candles: c, exchange: s.mode === "live" ? "BYBIT" : "DEMO" });
+        fresh.push({ id: `${sym}-${Date.now()}`, sym, side: best.a.side!, tf: best.tf, entry: best.a.entry, sl: best.a.sl, tp1: best.a.tp1, tp2: best.a.tp2, price: t.last, spread, time: Date.now(), trend: best.a.trend, status: "open", candles: best.c, exchange: s.mode === "live" ? "BYBIT" : "DEMO" });
       } catch { /* skip symbol */ }
     }));
     setScanned(n);
