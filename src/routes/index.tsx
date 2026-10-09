@@ -20,6 +20,7 @@ type Status = "open" | "tp1" | "tp2" | "sl";
 type Signal = { id: string; sym: string; side: "LONG" | "SHORT"; tf: string; entry: number; sl: number; tp1: number; tp2: number; price: number; spread: number; time: number; trend: string; status: Status; candles: Candle[]; exchange: string };
 type Conn = { status: "idle" | "checking" | "ok" | "error"; latency?: number; error?: string };
 
+const SIGNAL_TTL = 30000;
 const field = "h-11 w-full rounded-lg border border-input bg-muted px-4 font-mono text-foreground outline-none focus:border-primary";
 const label = "mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 
@@ -118,6 +119,14 @@ function Index() {
     }));
     if (newSl) setSls((v) => [...v, ...Array(newSl).fill(Date.now())]);
   }
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      const now = Date.now();
+      setSignals((list) => list.filter((x) => now - x.time < SIGNAL_TTL));
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (!running) return;
