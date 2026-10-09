@@ -8,3 +8,4 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+- Market data (Bybit) is fetched from the browser, not server functions: Bybit geo-blocks server IPs.
