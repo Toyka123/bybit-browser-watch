@@ -23,6 +23,14 @@ type Conn = { status: "idle" | "checking" | "ok" | "error"; latency?: number; er
 const field = "h-11 w-full rounded-lg border border-input bg-muted px-4 font-mono text-foreground outline-none focus:border-primary";
 const label = "mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 const SIGNAL_TTL = 40000;
+const tfMs = (tf: string) => (Number(TIMEFRAMES[tf]) || 5) * 60000;
+const fmtLeft = (ms: number) => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  if (s < 60) return `${s}с`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}м`;
+  return `${Math.floor(m / 60)}ч ${m % 60}м`;
+};
 
 function Index() {
   const [mode, setMode] = useState<Mode>("demo");
