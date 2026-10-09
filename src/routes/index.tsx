@@ -317,8 +317,17 @@ function Detail({ s }: { s: Signal }) {
           </div>
           <div className="mt-1 text-xs text-muted-foreground">{s.exchange} · спред {s.spread.toFixed(3)}% · {statusText}</div>
           <div className="mt-2 flex items-center gap-2">
-            <span className={`rounded-md px-2.5 py-1 font-mono text-sm font-bold ${leftSec <= 10 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn"}`}>⏱ {leftSec}с</span>
-            <span className="text-xs text-muted-foreground">на вход в сделку — потом сигнал исчезнет</span>
+            {leftMs > 0 ? (
+              <>
+                <span className={`rounded-md px-2.5 py-1 font-mono text-sm font-bold ${leftSec <= 10 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn"}`}>⏱ {leftSec}с</span>
+                <span className="text-xs text-muted-foreground">на вход в сделку</span>
+              </>
+            ) : (
+              <>
+                <span className="rounded-md px-2.5 py-1 font-mono text-sm font-bold bg-info/15 text-info">◧ {lifeLeft}</span>
+                <span className="text-xs text-muted-foreground">сигнал живёт выбранный таймфрейм ({s.tf}), потом исчезнет</span>
+              </>
+            )}
           </div>
         </div>
         <div className="text-right">
