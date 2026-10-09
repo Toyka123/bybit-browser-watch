@@ -20,6 +20,7 @@ type Status = "open" | "tp1" | "tp2" | "sl";
 type Signal = { id: string; sym: string; side: "LONG" | "SHORT"; tf: string; entry: number; sl: number; tp1: number; tp2: number; price: number; spread: number; time: number; trend: string; status: Status; candles: Candle[]; exchange: string };
 type Conn = { status: "idle" | "checking" | "ok" | "error"; latency?: number; error?: string };
 
+const SIGNAL_TTL = 30000;
 const field = "h-11 w-full rounded-lg border border-input bg-muted px-4 font-mono text-foreground outline-none focus:border-primary";
 const label = "mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 
@@ -118,6 +119,14 @@ function Index() {
     }));
     if (newSl) setSls((v) => [...v, ...Array(newSl).fill(Date.now())]);
   }
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      const now = Date.now();
+      setSignals((list) => list.filter((x) => now - x.time < SIGNAL_TTL));
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (!running) return;
@@ -220,7 +229,8 @@ function Index() {
               <button key={x.id} onClick={() => setSel(x.id)} className={`flex items-center gap-2 rounded-lg border bg-card px-3 py-2 font-mono text-xs font-semibold ${cur?.id === x.id ? "border-primary/60" : ""} ${x.status === "sl" || x.status === "tp2" ? "opacity-50" : ""}`}>
                 {pair(x.sym)}
                 <span className={`rounded px-1.5 py-0.5 ${x.side === "LONG" ? "bg-long/15 text-long" : "bg-short/15 text-short"}`}>{x.side}</span>
-                <span className="text-muted-foreground">{x.status === "open" ? x.tf : x.status.toUpperCase()}</span>
+                <span className="text-muted-foreground">{x.tf}</span>
+                <span className={`rounded px-1.5 py-0.5 ${x.status === "open" ? "bg-warn/15 text-warn" : "bg-muted text-muted-foreground"}`}>{x.status === "open" ? `${Math.max(0, Math.ceil((SIGNAL_TTL - (Date.now() - x.time)) / 1000))}с` : x.status.toUpperCase()}</span>
               </button>
             ))}
           </div>
@@ -272,6 +282,7 @@ function Detail({ s }: { s: Signal }) {
   const leftToRight = s.side === "SHORT" ? [...pts] : [...pts].reverse();
   void leftToRight;
   const mins = Math.round((Date.now() - s.time) / 60000);
+  const leftSec = Math.max(0, Math.ceil((SIGNAL_TTL - (Date.now() - s.time)) / 1000));
   const statusText = { open: "Открыта", tp1: "TP1 взят · SL в безубыток", tp2: "TP2 взят · закрыта", sl: "Стоп-лосс · закрыта" }[s.status];
   const marks: [string, number, string][] = [["TP2", s.tp2, "text-long"], ["TP1", s.tp1, "text-long"], ["Цена", s.price, "text-info"], ["Вход", s.entry, "text-foreground"], ["SL", s.sl, "text-short"]];
   return (
@@ -288,6 +299,12 @@ function Detail({ s }: { s: Signal }) {
             <span>· {mins} мин назад · {s.trend}</span>
           </div>
           <div className="mt-1 text-xs text-muted-foreground">{s.exchange} · спред {s.spread.toFixed(3)}% · {statusText}</div>
+          {s.status === "open" && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className={`rounded-md px-2.5 py-1 font-mono text-sm font-bold ${leftSec <= 10 ? "bg-destructive/15 text-destructive" : "bg-warn/15 text-warn"}`}>⏱ {leftSec}с</span>
+              <span className="text-xs text-muted-foreground">на вход в сделку — потом сигнал исчезнет</span>
+            </div>
+          )}
         </div>
         <div className="text-right">
           <div className="text-xs uppercase text-muted-foreground">Текущая цена</div>
