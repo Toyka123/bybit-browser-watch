@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fmt } from "@/lib/market";
 
 type S = { sym: string; side: "LONG" | "SHORT"; price: number; sl: number; tp2: number; lev: number; atrPct: number };
@@ -13,10 +13,17 @@ export function BybitWidget({ s }: { s: S }) {
   const [reduce, setReduce] = useState(false);
   const [tp, setTp] = useState(fmt(s.tp2));
   const [sl, setSl] = useState(fmt(s.sl));
+  const [lev, setLev] = useState(s.lev);
+  // Auto-fill leverage (and TP/SL) from the signal's volatility each time the active signal changes.
+  useEffect(() => {
+    setLev(s.lev);
+    setTp(fmt(s.tp2));
+    setSl(fmt(s.sl));
+  }, [s.sym, s.side, s.price, s.lev, s.tp2, s.sl]);
   const balance = 1000;
   const cost = (balance * pct) / 100;
-  const qty = (cost * s.lev) / s.price;
-  const liq = s.side === "LONG" ? s.price * (1 - 1 / s.lev) : s.price * (1 + 1 / s.lev);
+  const qty = (cost * lev) / s.price;
+  const liq = s.side === "LONG" ? s.price * (1 - 1 / lev) : s.price * (1 + 1 / lev);
   const long = s.side === "LONG";
 
   const Seg = <T extends string>({ v, set, opts }: { v: T; set: (x: T) => void; opts: [T, string][] }) => (
@@ -50,7 +57,14 @@ export function BybitWidget({ s }: { s: S }) {
       </div>
       <div className="grid grid-cols-2 gap-2">
         <Seg v={margin} set={setMargin} opts={[["cross", "Крос"], ["iso", "Ізольована"]]} />
-        <div className="rounded-lg bg-secondary py-1.5 text-center text-xs font-semibold">{s.lev.toFixed(2)}x</div>
+        <div className="flex items-center justify-center gap-1 rounded-lg bg-secondary py-1.5 text-xs font-semibold" title={`Авто за волатильністю (ATR ${s.atrPct.toFixed(2)}%)`}>
+          <input
+            type="number" min={1} max={100} value={lev}
+            onChange={(e) => setLev(Math.max(1, Math.min(100, +e.target.value || 1)))}
+            className="w-10 bg-transparent text-center font-mono outline-none"
+          />
+          <span className="text-muted-foreground">x</span>
+        </div>
       </div>
       <Seg v={type} set={setType} opts={[["market", "Ринковий"], ["limit", "Лімітний"]]} />
       <Field l="Ціна" v={type === "market" ? "Остання" : fmt(s.price)} unit="USDT" />
