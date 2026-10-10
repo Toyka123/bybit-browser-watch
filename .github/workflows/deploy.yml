@@ -24,21 +24,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
+          bun-version: latest
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install Dependencies
+        run: bun install
 
-      - name: Build
-        run: npm run build
+      - name: Build Project
+        run: bun run build
 
-      - name: Upload artifact
+      - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: .output/public
 
       - name: Deploy to GitHub Pages
         id: deployment
