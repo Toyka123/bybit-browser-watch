@@ -91,21 +91,30 @@ export function atr(c: Candle[], n = 14) {
 
 export type Params = { risk: number; leverage: number; ema1: number; ema2: number; rsi: number };
 
+// ATR% = average (High - Low)/Close over last 20 candles. Low vol → higher leverage.
+export function volatility(c: Candle[], n = 20) {
+  const last = c.slice(-n);
+  const atrPct = (last.reduce((s, x) => s + (x.h - x.l) / x.c, 0) / last.length) * 100;
+  // Leverage so that a 1.5×ATR stop ≈ 15% margin loss, clamped to 3x–15x.
+  const leverage = Math.max(3, Math.min(15, Math.round(10 / (atrPct * 1.5))));
+  return { atrPct, leverage };
+}
+
 export function analyze(c: Candle[], p: Params) {
   const closes = c.map((x) => x.c);
   const f = ema(closes, p.ema1), s = ema(closes, p.ema2);
   const r = rsi(closes, p.rsi);
   const last = closes.at(-1)!, ef = f.at(-1)!, es = s.at(-1)!;
-  const a = atr(c);
+  const { atrPct, leverage } = volatility(c);
   let side: "LONG" | "SHORT" | null = null;
   if (ef > es && last > ef && r > 50 && r < 70) side = "LONG";
   if (ef < es && last < ef && r < 50 && r > 30) side = "SHORT";
   const dir = side === "SHORT" ? -1 : 1;
-  const risk = a * 1.5;
+  const risk = last * (atrPct * 1.5) / 100;
   return {
-    side, rsi: r, emaF: f, emaS: s,
+    side, rsi: r, emaF: f, emaS: s, atrPct, leverage,
     trend: ef > es ? "Тренд вверх" : "Тренд вниз",
-    entry: last, sl: last - dir * risk, tp1: last + dir * risk * 1.5, tp2: last + dir * risk * 3,
+    entry: last, sl: last - dir * risk, tp1: last + dir * risk, tp2: last + dir * risk * 2,
   };
 }
 

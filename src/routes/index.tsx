@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { analyze, atr, checkBybit, fetchCandles, fetchTicker, fmt, pair, SYMBOLS, TIMEFRAMES, type Candle, type Mode, type Params } from "@/lib/market";
+import { BybitWidget } from "@/components/BybitWidget";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Status = "open" | "tp1" | "tp2" | "sl";
-type Signal = { id: string; sym: string; side: "LONG" | "SHORT"; tf: string; entry: number; sl: number; tp1: number; tp2: number; price: number; spread: number; time: number; trend: string; status: Status; candles: Candle[]; exchange: string };
+type Signal = { id: string; sym: string; side: "LONG" | "SHORT"; tf: string; entry: number; sl: number; tp1: number; tp2: number; price: number; spread: number; time: number; trend: string; status: Status; candles: Candle[]; exchange: string; lev: number; atrPct: number };
 type Conn = { status: "idle" | "checking" | "ok" | "error"; latency?: number; error?: string };
 
 const field = "h-11 w-full rounded-lg border border-input bg-muted px-4 font-mono text-foreground outline-none focus:border-primary";
@@ -93,7 +94,7 @@ function Index() {
         const spread = ((t.ask - t.bid) / t.last) * 100;
         if (spread > 0.1) return;
         f++;
-        fresh.push({ id: `${sym}-${Date.now()}`, sym, side: best.a.side!, tf: best.tf, entry: best.a.entry, sl: best.a.sl, tp1: best.a.tp1, tp2: best.a.tp2, price: t.last, spread, time: Date.now(), trend: best.a.trend, status: "open", candles: best.c, exchange: s.mode === "live" ? "BYBIT" : "DEMO" });
+        fresh.push({ id: `${sym}-${Date.now()}`, sym, side: best.a.side!, tf: best.tf, entry: best.a.entry, sl: best.a.sl, tp1: best.a.tp1, tp2: best.a.tp2, price: t.last, spread, time: Date.now(), trend: best.a.trend, status: "open", candles: best.c, exchange: s.mode === "live" ? "BYBIT" : "DEMO", lev: best.a.leverage, atrPct: best.a.atrPct });
       } catch { /* skip symbol */ }
     }));
     setScanned(n);
@@ -254,6 +255,7 @@ function Index() {
           <div className="grid gap-5 lg:grid-cols-2">
             <Detail s={cur} />
             <Chart s={cur} p={p} />
+            <div className="lg:col-span-2 flex justify-center"><BybitWidget key={cur.id} s={cur} /></div>
           </div>
         ) : (
           <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">Нажмите «Сканировать рынок», чтобы найти сигналы{mode === "live" ? " по живым данным Bybit" : ""}.</div>
