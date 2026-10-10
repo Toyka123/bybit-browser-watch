@@ -1,0 +1,8 @@
+[build]
+  command = "bun run build"
+  publish = "dist"
+
+[build.environment]
+  # Build the TanStack Start server for Netlify Functions instead of the
+  # Cloudflare default used by @lovable.dev/vite-tanstack-config.
+  NITRO_PRESET = "netlify"
