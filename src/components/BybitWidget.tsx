@@ -9,6 +9,7 @@ export function BybitWidget({ s }: { s: S }) {
   const [margin, setMargin] = useState<"cross" | "iso">("cross");
   const [type, setType] = useState<"market" | "limit">("market");
   const [pct, setPct] = useState(25);
+  const [marginAmount, setMarginAmount] = useState("250.00");
   const [tpsl, setTpsl] = useState(true);
   const [postOnly, setPostOnly] = useState(false);
   const [reduce, setReduce] = useState(false);
@@ -32,7 +33,8 @@ export function BybitWidget({ s }: { s: S }) {
     setSl(fmt(s.sl));
   }, [s.sym, s.side, s.price, s.lev, s.tp2, s.sl]);
   const balance = 1000;
-  const cost = (balance * pct) / 100;
+  const parsedMargin = Number(marginAmount);
+  const cost = Number.isFinite(parsedMargin) && parsedMargin > 0 ? parsedMargin : 0;
   const qty = (cost * lev) / s.price;
   const liq = s.side === "LONG" ? s.price * (1 - 1 / lev) : s.price * (1 + 1 / lev);
   const long = s.side === "LONG";
@@ -70,6 +72,10 @@ export function BybitWidget({ s }: { s: S }) {
   const openTrade = async () => {
     if (!credentials) {
       setTradeStatus("Сначала сохраните или разблокируйте API-ключи.");
+      return;
+    }
+    if (cost <= 0 || !Number.isFinite(qty)) {
+      setTradeStatus("Введите сумму маржи больше нуля.");
       return;
     }
     const takeProfit = Number(tp);
@@ -143,10 +149,33 @@ export function BybitWidget({ s }: { s: S }) {
       <Field l="Ціна" v={type === "market" ? "Остання" : fmt(s.price)} unit="USDT" />
       <Field l="Кількість" v={qty.toFixed(4)} unit={s.sym} />
       <div className="px-1">
-        <input type="range" min={0} max={100} step={25} value={pct} onChange={(e) => setPct(+e.target.value)} className="w-full" style={{ accentColor: ORANGE }} />
+        <input type="range" min={0} max={100} step={0.1} value={pct} onChange={(e) => {
+          const nextPct = Number(e.target.value);
+          setPct(nextPct);
+          setMarginAmount(((balance * nextPct) / 100).toFixed(2));
+        }} className="w-full" style={{ accentColor: ORANGE }} />
         <div className="flex justify-between text-[10px] text-muted-foreground">{[0, 25, 50, 75, 100].map((x) => <span key={x}>{x}%</span>)}</div>
       </div>
-      <div className="flex justify-between text-xs"><span className="text-muted-foreground">Вартість USDT</span><span className="font-mono">{cost.toFixed(2)}</span></div>
+      <div className="flex items-center justify-between rounded-lg bg-secondary px-3 py-2 text-sm">
+        <label htmlFor="margin-amount" className="text-xs text-muted-foreground">Вартість USDT</label>
+        <div className="flex items-center gap-1">
+          <input
+            id="margin-amount"
+            type="number"
+            step="any"
+            value={marginAmount}
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              setMarginAmount(value);
+              if (value === "") setPct(0);
+              else if (Number.isFinite(Number(value))) setPct(Math.max(0, Math.min(100, (Number(value) / balance) * 100)));
+            }}
+            className="w-28 cursor-text bg-transparent text-right font-mono outline-none"
+          />
+          <span className="text-xs text-muted-foreground">USDT</span>
+        </div>
+      </div>
+      <p className="-mt-2 text-[10px] text-muted-foreground">Цільова маржа; фактична сума може трохи відрізнятися через крок кількості та ціну виконання Market-ордера.</p>
       <Check on={tpsl} set={setTpsl} l="TP/SL" />
       {tpsl && (
         <div className="space-y-2">
