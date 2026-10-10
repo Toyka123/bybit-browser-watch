@@ -1,5 +1,3 @@
-import { Buffer } from 'buffer';
-
 // Функция для безопасного шифрования ключей в браузере (AES-GCM)
 export async function encryptData(text: string, password: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -83,68 +81,108 @@ export async function decryptData(encryptedBase64: string, password: string): Pr
   return new TextDecoder().decode(decrypted);
 }
 
-// Отправка рыночного ордера на Bybit API V5
-export async function placeBybitOrder(params: {
-  apiKey: string;
-  apiSecret: string;
-  symbol: string;
-  side: 'Buy' | 'Sell';
-  qty: string;
-  takeProfit?: string;
-  stopLoss?: string;
-}) {
-  const timestamp = Date.now().toString();
-  const recvWindow = '5000';
-  
-  // Убираем префикс -SWAP для совместимости с Bybit API (например, SOL-USDT-SWAP -> SOLUSDT)
-  const cleanSymbol = params.symbol.replace('-SWAP', '').replace('-', '');
+const BYBIT = 'https://api.bybit.com';
+const RECV_WINDOW = '5000';
 
-  const body = {
-    category: 'linear',
-    symbol: cleanSymbol,
-    side: params.side,
-    orderType: 'Market',
-    qty: params.qty,
-    timeInForce: 'GTC',
-    takeProfit: params.takeProfit,
-    stopLoss: params.stopLoss,
-    tpTriggerBy: 'LastPrice',
-    slTriggerBy: 'LastPrice'
-  };
+export const credentialsStorageKey = 'bybit-trading-credentials';
 
-  const reqBody = JSON.stringify(body);
-  const paramStr = timestamp + params.apiKey + recvWindow + reqBody;
+export type ApiCredentials = { apiKey: string; apiSecret: string };
+export type EncryptedCredentials = { v: 1; data: string };
 
-  // Генерация подписи HMAC_SHA256 для Bybit V5
-  const cryptoObj = window.crypto;
+export async function encryptCredentials(creds: ApiCredentials, password: string): Promise<EncryptedCredentials> {
+  return { v: 1, data: await encryptData(JSON.stringify(creds), password) };
+}
+
+export async function decryptCredentials(encrypted: EncryptedCredentials, password: string): Promise<ApiCredentials> {
+  const parsed = JSON.parse(await decryptData(encrypted.data, password)) as Partial<ApiCredentials>;
+  if (typeof parsed.apiKey !== 'string' || typeof parsed.apiSecret !== 'string') throw new Error('Повреждённые данные ключей.');
+  return { apiKey: parsed.apiKey, apiSecret: parsed.apiSecret };
+}
+
+async function hmacHex(secret: string, message: string): Promise<string> {
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(params.apiSecret);
-  const messageData = encoder.encode(paramStr);
+  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
-  const cryptoKey = await cryptoObj.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  
-  const signatureBuffer = await cryptoObj.subtle.sign('HMAC', cryptoKey, messageData);
-  const hashArray = Array.from(new Uint8Array(signatureBuffer));
-  const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+type BybitResponse<T> = { retCode: number; retMsg: string; result: T };
 
-  // Отправляем запрос напрямую на официальный эндпоинт Bybit V5
-  const response = await fetch('https://bybit.com', {
+// Подписанный POST-запрос к Bybit API V5 (HMAC_SHA256)
+async function signedPost<T>(creds: ApiCredentials, path: string, body: Record<string, unknown>): Promise<BybitResponse<T>> {
+  const timestamp = Date.now().toString();
+  const reqBody = JSON.stringify(body);
+  const signature = await hmacHex(creds.apiSecret, timestamp + creds.apiKey + RECV_WINDOW + reqBody);
+  const response = await fetch(`${BYBIT}${path}`, {
     method: 'POST',
     headers: {
-      'X-BAPI-API-KEY': params.apiKey,
+      'X-BAPI-API-KEY': creds.apiKey,
       'X-BAPI-SIGN': signature,
       'X-BAPI-TIMESTAMP': timestamp,
-      'X-BAPI-RECV-WINDOW': recvWindow,
+      'X-BAPI-RECV-WINDOW': RECV_WINDOW,
       'Content-Type': 'application/json'
     },
     body: reqBody
   });
-
+  if (!response.ok) throw new Error(`Bybit HTTP ${response.status}`);
   return await response.json();
+}
+
+// BTC -> BTCUSDT, SOL-USDT-SWAP -> SOLUSDT
+function toLinearSymbol(symbol: string): string {
+  const clean = symbol.replace('-SWAP', '').replace(/-/g, '').toUpperCase();
+  return clean.endsWith('USDT') ? clean : `${clean}USDT`;
+}
+
+function decimals(step: string): number {
+  const i = step.indexOf('.');
+  return i < 0 ? 0 : step.length - i - 1;
+}
+
+// Округление количества и цен под шаги инструмента
+async function fetchInstrument(symbol: string) {
+  const r = await fetch(`${BYBIT}/v5/market/instruments-info?category=linear&symbol=${symbol}`);
+  const j = await r.json();
+  const info = j?.result?.list?.[0];
+  if (!info) throw new Error(`Инструмент ${symbol} не найден на Bybit.`);
+  return {
+    qtyStep: String(info.lotSizeFilter.qtyStep),
+    minQty: Number(info.lotSizeFilter.minOrderQty),
+    tickSize: String(info.priceFilter.tickSize),
+  };
+}
+
+function roundToStep(value: number, step: string, mode: 'floor' | 'round' = 'round'): string {
+  const s = Number(step);
+  const n = (mode === 'floor' ? Math.floor(value / s + 1e-9) : Math.round(value / s)) * s;
+  return n.toFixed(decimals(step));
+}
+
+export async function placeLinearMarketOrder(
+  creds: ApiCredentials,
+  params: { symbol: string; side: 'LONG' | 'SHORT'; qty: number; leverage: number; takeProfit?: number; stopLoss?: number }
+): Promise<{ orderId: string; symbol: string; qty: string }> {
+  const symbol = toLinearSymbol(params.symbol);
+  const inst = await fetchInstrument(symbol);
+  const qty = roundToStep(params.qty, inst.qtyStep, 'floor');
+  if (Number(qty) < inst.minQty) throw new Error(`Количество меньше минимального для ${symbol} (${inst.minQty}).`);
+
+  const lev = String(Math.max(1, Math.round(params.leverage)));
+  const levRes = await signedPost(creds, '/v5/position/set-leverage', { category: 'linear', symbol, buyLeverage: lev, sellLeverage: lev });
+  // 110043: плечо уже установлено
+  if (levRes.retCode !== 0 && levRes.retCode !== 110043) throw new Error(`Bybit: ${levRes.retMsg}`);
+
+  const body = {
+    category: 'linear',
+    symbol,
+    side: params.side === 'LONG' ? 'Buy' : 'Sell',
+    orderType: 'Market',
+    qty,
+    ...(params.takeProfit !== undefined ? { takeProfit: roundToStep(params.takeProfit, inst.tickSize), tpTriggerBy: 'LastPrice' } : {}),
+    ...(params.stopLoss !== undefined ? { stopLoss: roundToStep(params.stopLoss, inst.tickSize), slTriggerBy: 'LastPrice' } : {}),
+  };
+
+  const res = await signedPost<{ orderId: string }>(creds, '/v5/order/create', body);
+  if (res.retCode !== 0) throw new Error(`Bybit: ${res.retMsg}`);
+  return { orderId: res.result.orderId, symbol, qty };
 }
