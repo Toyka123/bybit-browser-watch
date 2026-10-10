@@ -251,13 +251,11 @@ function Index() {
           </div>
         )}
 
-        {cur ? (
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-[1.1fr_1.2fr_minmax(320px,360px)]">
             <Detail s={cur} />
             <Chart s={cur} p={p} />
-            <div className="lg:col-span-2 flex justify-center"><BybitWidget key={cur.id} s={cur} /></div>
+            <BybitWidget key={cur.id} s={cur} />
           </div>
-        ) : (
           <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">Нажмите «Сканировать рынок», чтобы найти сигналы{mode === "live" ? " по живым данным Bybit" : ""}.</div>
         )}
       </main>
