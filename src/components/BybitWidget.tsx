@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fmt } from "@/lib/market";
+import { credentialsStorageKey, decryptCredentials, encryptCredentials, placeLinearMarketOrder, type ApiCredentials, type EncryptedCredentials } from "@/lib/bybit-trading";
 
 type S = { sym: string; side: "LONG" | "SHORT"; price: number; sl: number; tp2: number; lev: number; atrPct: number };
 const ORANGE = "var(--warn)";
@@ -14,6 +15,16 @@ export function BybitWidget({ s }: { s: S }) {
   const [tp, setTp] = useState(fmt(s.tp2));
   const [sl, setSl] = useState(fmt(s.sl));
   const [lev, setLev] = useState(s.lev);
+  const [apiKey, setApiKey] = useState("");
+  const [apiSecret, setApiSecret] = useState("");
+  const [storagePassword, setStoragePassword] = useState("");
+  const [credentials, setCredentials] = useState<ApiCredentials | null>(null);
+  const [hasSavedCredentials, setHasSavedCredentials] = useState(false);
+  const [tradeStatus, setTradeStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    setHasSavedCredentials(Boolean(localStorage.getItem(credentialsStorageKey)));
+  }, []);
   // Auto-fill leverage (and TP/SL) from the signal's volatility each time the active signal changes.
   useEffect(() => {
     setLev(s.lev);
@@ -25,6 +36,65 @@ export function BybitWidget({ s }: { s: S }) {
   const qty = (cost * lev) / s.price;
   const liq = s.side === "LONG" ? s.price * (1 - 1 / lev) : s.price * (1 + 1 / lev);
   const long = s.side === "LONG";
+
+  const saveCredentials = async () => {
+    if (!apiKey.trim() || !apiSecret.trim() || storagePassword.length < 12) {
+      setTradeStatus("Укажите API Key, API Secret и пароль шифрования не короче 12 символов.");
+      return;
+    }
+    try {
+      const encrypted = await encryptCredentials({ apiKey: apiKey.trim(), apiSecret: apiSecret.trim() }, storagePassword);
+      localStorage.setItem(credentialsStorageKey, JSON.stringify(encrypted));
+      setCredentials({ apiKey: apiKey.trim(), apiSecret: apiSecret.trim() });
+      setHasSavedCredentials(true);
+      setApiSecret("");
+      setStoragePassword("");
+      setTradeStatus("Ключи сохранены в зашифрованном виде и доступны до закрытия или обновления страницы.");
+    } catch (error) {
+      setTradeStatus(error instanceof Error ? error.message : "Не удалось зашифровать ключи.");
+    }
+  };
+
+  const unlockCredentials = async () => {
+    try {
+      const encrypted = JSON.parse(localStorage.getItem(credentialsStorageKey) ?? "null") as EncryptedCredentials | null;
+      if (!encrypted) throw new Error("Зашифрованные ключи не найдены.");
+      setCredentials(await decryptCredentials(encrypted, storagePassword));
+      setStoragePassword("");
+      setTradeStatus("Ключи разблокированы до закрытия или обновления страницы.");
+    } catch {
+      setTradeStatus("Не удалось разблокировать ключи. Проверьте пароль шифрования.");
+    }
+  };
+
+  const openTrade = async () => {
+    if (!credentials) {
+      setTradeStatus("Сначала сохраните или разблокируйте API-ключи.");
+      return;
+    }
+    const takeProfit = Number(tp);
+    const stopLoss = Number(sl);
+    if (tpsl && (!Number.isFinite(takeProfit) || !Number.isFinite(stopLoss) || takeProfit <= 0 || stopLoss <= 0 || (long ? takeProfit <= s.price || stopLoss >= s.price : takeProfit >= s.price || stopLoss <= s.price))) {
+      setTradeStatus("Проверьте уровни TP/SL: они должны находиться по правильную сторону от цены сигнала.");
+      return;
+    }
+    setBusy(true);
+    setTradeStatus("Отправка Market-ордера в Bybit...");
+    try {
+      const result = await placeLinearMarketOrder(credentials, {
+        symbol: s.sym,
+        side: s.side,
+        qty,
+        leverage: lev,
+        ...(tpsl ? { takeProfit, stopLoss } : {}),
+      });
+      setTradeStatus(`Ордер принят: ${result.symbol}, ${result.qty} ${s.sym}. ID: ${result.orderId}`);
+    } catch (error) {
+      setTradeStatus(error instanceof Error ? error.message : "Не удалось отправить ордер.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const Seg = <T extends string>({ v, set, opts }: { v: T; set: (x: T) => void; opts: [T, string][] }) => (
     <div className="flex rounded-lg bg-secondary p-0.5 text-xs">
@@ -56,7 +126,10 @@ export function BybitWidget({ s }: { s: S }) {
         <span className="text-xs text-muted-foreground">ATR {s.atrPct.toFixed(2)}%</span>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Seg v={margin} set={setMargin} opts={[["cross", "Крос"], ["iso", "Ізольована"]]} />
+        <div title="Режим маржі для розрахунку; API використовує налаштування акаунта Bybit.">
+          <Seg v={margin} set={setMargin} opts={[["cross", "Крос · расчет"], ["iso", "Изолированная · расчет"]]} />
+          <p className="mt-1 text-[10px] text-muted-foreground">Лише для розрахунку, налаштування Bybit не змінюються.</p>
+        </div>
         <div className="flex items-center justify-center gap-1 rounded-lg bg-secondary py-1.5 text-xs font-semibold" title={`Авто за волатильністю (ATR ${s.atrPct.toFixed(2)}%)`}>
           <input
             type="number" min={1} max={100} value={lev}
@@ -90,6 +163,30 @@ export function BybitWidget({ s }: { s: S }) {
         <button className={`rounded-lg py-2.5 font-semibold ${long ? "bg-long text-primary-foreground ring-2 ring-long" : "bg-long/20 text-long"}`}>Лонг</button>
         <button className={`rounded-lg py-2.5 font-semibold ${!long ? "bg-short text-foreground ring-2 ring-short" : "bg-short/20 text-short"}`}>Шорт</button>
       </div>
+      <details className="rounded-lg border p-3">
+        <summary className="cursor-pointer text-sm font-semibold">API-ключи Bybit {credentials ? "· разблокированы" : hasSavedCredentials ? "· сохранены" : "· не настроены"}</summary>
+        <div className="mt-3 space-y-2">
+          {!hasSavedCredentials && <input autoComplete="off" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="API Key" className="w-full rounded-md bg-secondary px-3 py-2 text-sm outline-none" />}
+          {!hasSavedCredentials && <input type="password" autoComplete="new-password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} placeholder="API Secret" className="w-full rounded-md bg-secondary px-3 py-2 text-sm outline-none" />}
+          {!credentials && <input type="password" autoComplete="new-password" value={storagePassword} onChange={(e) => setStoragePassword(e.target.value)} placeholder={hasSavedCredentials ? "Пароль шифрования" : "Пароль шифрования (12+ символов)"} className="w-full rounded-md bg-secondary px-3 py-2 text-sm outline-none" />}
+          {!credentials && <button onClick={hasSavedCredentials ? unlockCredentials : saveCredentials} className="w-full rounded-md border py-2 text-sm font-semibold">{hasSavedCredentials ? "Разблокировать ключи" : "Зашифровать и сохранить"}</button>}
+          {credentials && <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => setCredentials(null)} className="rounded-md border py-2 text-sm">Заблокировать</button>
+            <button onClick={() => {
+              localStorage.removeItem(credentialsStorageKey);
+              setCredentials(null);
+              setHasSavedCredentials(false);
+              setTradeStatus("Збережені ключі видалено з цього браузера.");
+            }} className="rounded-md border py-2 text-sm">Удалить ключи</button>
+          </div>}
+          <p className="text-xs text-muted-foreground">Ключи шифруются паролем в браузере. Используйте API-ключ только с правом торговли, без вывода средств; XSS и расширения браузера всё ещё могут получить разблокированный ключ.</p>
+        </div>
+      </details>
+      <button onClick={openTrade} disabled={busy} className="w-full rounded-lg bg-primary px-3 py-3 text-sm font-bold text-primary-foreground disabled:cursor-wait disabled:opacity-60">
+        {busy ? "Отправка ордера..." : "Открыть сделку в 1 клик"}
+      </button>
+      <p className="text-xs font-semibold text-destructive">Основная сеть Bybit: будет отправлен реальный рыночный ордер.</p>
+      <p aria-live="polite" className="break-words text-xs text-muted-foreground">{tradeStatus || "Bybit V5 · Market · линейный USDT-контракт · One-Way · маржа из настроек Bybit"}</p>
     </div>
   );
 }
