@@ -233,14 +233,14 @@
             let getX = (i) => (canvas.width / (priceHistory.length - 1)) * i;
             let getY = (v) => canvas.height - ((v - min) / range) * canvas.height;
 
-            let ema9 =, ema21 =, k9 = 2/10, k21 = 2/22, p9 = priceHistory, p21 = priceHistory;
+            let ema9 = [], ema21 = [], k9 = 2/10, k21 = 2/22, p9 = priceHistory[0], p21 = priceHistory[0];
             priceHistory.forEach(p => { p9 = p * k9 + p9 * (1 - k9); p21 = p * k21 + p21 * (1 - k21); ema9.push(p9); ema21.push(p21); });
 
-            ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory));
+            ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory[0]));
             for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i])); ctx.stroke();
-            ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(getX(0), getY(ema9));
+            ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(getX(0), getY(ema9[0]));
             for(let i=1; i<ema9.length; i++) ctx.lineTo(getX(i), getY(ema9[i])); ctx.stroke();
-            ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(getX(0), getY(ema21));
+            ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(getX(0), getY(ema21[0]));
             for(let i=1; i<ema21.length; i++) ctx.lineTo(getX(i), getY(ema21[i])); ctx.stroke();
         }
 
