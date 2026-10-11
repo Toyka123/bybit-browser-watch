@@ -31,7 +31,8 @@
         .coin-name { font-weight: 700; font-size: 14px; font-family: monospace; }
         .badge-short { background: rgba(255, 59, 48, 0.1); color: #ff3b30; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
         .badge-long { background: rgba(0, 177, 89, 0.1); color: #00b159; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
-        .coin-price { font-size: 18px; font-weight: 700; font-family: monospace; }
+        .badge-accuracy { background: rgba(245, 158, 11, 0.1); color: #f59e0b; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        .coin-price { font-size: 18px; font-weight: 700; font-family: monospace; margin: 2px 0; }
         .mini-graph { height: 35px; width: 100%; display: flex; align-items: flex-end; gap: 2px; }
         .graph-bar { flex: 1; background: #2d3848; border-radius: 1px; }
         .btn-action { border: none; border-radius: 6px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; background-color: #ff3b30; color: #fff; }
@@ -127,31 +128,31 @@
         </section>
     </main>
     <script>
-        let isRunning = true, selectedCoinIndex = 8, activeTF = '15m';
+        let isRunning = true, selectedCoinIndex = 13, activeTF = '15m';
         const audioAlert = new Audio('https://mixkit.co');
         
         let wins = parseInt(localStorage.getItem('trader_wins')) || 0;
         let losses = parseInt(localStorage.getItem('trader_losses')) || 0;
 
+        // Инициализируем монеты с реальными долгосрочными таймерами, как на скрипте Lovable
         const COINS = [
-            { name: 'NEAR-USDT-SWAP', type: 'LONG', price: 4.8135, baseLeverage: 15, timer: 38 },
-            { name: 'TRX-USDT-SWAP', type: 'LONG', price: 0.1595, baseLeverage: 15, timer: 38 },
-            { name: 'SOL-USDT-SWAP', type: 'LONG', price: 141.8104, baseLeverage: 15, timer: 38 },
-            { name: 'BNB-USDT-SWAP', type: 'LONG', price: 565.1632, baseLeverage: 15, timer: 38 },
-            { name: 'DOT-USDT-SWAP', type: 'LONG', price: 4.2266, baseLeverage: 15, timer: 38 },
-            { name: 'ETH-USDT-SWAP', type: 'LONG', price: 2434.8744, baseLeverage: 15, timer: 38 },
-            { name: 'DOGE-USDT-SWAP', type: 'LONG', price: 0.1086, baseLeverage: 15, timer: 39 },
-            { name: 'ATOM-USDT-SWAP', type: 'SHORT', price: 6.9110, baseLeverage: 15, timer: 39 },
-            { name: 'SUI-USDT-SWAP', type: 'LONG', price: 1.1019, baseLeverage: 15, timer: 39 },
-            { name: 'LINK-USDT-SWAP', type: 'LONG', price: 11.2596, baseLeverage: 15, timer: 38 },
-            { name: 'XRP-USDT-SWAP', type: 'LONG', price: 0.5326, baseLeverage: 15, timer: 39 },
-            { name: 'TRX-USDT-SWAP', type: 'LONG', price: 0.1595, baseLeverage: 15, timer: 39 },
-            { name: 'DOT-USDT-SWAP', type: 'LONG', price: 4.2266, baseLeverage: 15, timer: 38 },
-            { name: 'BTC-USDT-SWAP', type: 'LONG', price: 83079.9000, baseLeverage: 15, timer: 39 },
-            { name: 'SOL-USDT-SWAP', type: 'LONG', price: 141.8104, baseLeverage: 15, timer: 39 }
+            { name: 'LTC-USDT-SWAP', type: 'SHORT', price: 64.1520, baseLeverage: 15, totalMinutes: 276, accuracy: 74.5 }, // 4h 36m
+            { name: 'ATOM-USDT-SWAP', type: 'SHORT', price: 6.9110, baseLeverage: 15, totalMinutes: 96, accuracy: 82.3 },   // 1h 36m
+            { name: 'NEAR-USDT-SWAP', type: 'LONG', price: 4.8135, baseLeverage: 15, totalMinutes: 276, accuracy: 84.5 },  // 4h 36m
+            { name: 'ADA-USDT-SWAP', type: 'SHORT', price: 0.3412, baseLeverage: 15, totalMinutes: 102, accuracy: 70.1 },  // 1h 42m
+            { name: 'DOGE-USDT-SWAP', type: 'SHORT', price: 0.1086, baseLeverage: 15, totalMinutes: 103, accuracy: 76.4 },  // 1h 43m
+            { name: 'BNB-USDT-SWAP', type: 'LONG', price: 565.1632, baseLeverage: 15, totalMinutes: 16, accuracy: 73.2 },   // 15m 16m
+            { name: 'DOT-USDT-SWAP', type: 'LONG', price: 4.2266, baseLeverage: 15, totalMinutes: 286, accuracy: 81.9 },   // 4h 46m
+            { name: 'TRX-USDT-SWAP', type: 'SHORT', price: 0.1595, baseLeverage: 15, totalMinutes: 293, accuracy: 88.2 },  // 4h 53m
+            { name: 'LINK-USDT-SWAP', type: 'LONG', price: 11.2596, baseLeverage: 15, totalMinutes: 23, accuracy: 85.1 },   // 15m 23m
+            { name: 'BTC-USDT-SWAP', type: 'LONG', price: 83129.2055, baseLeverage: 15, totalMinutes: 23, accuracy: 95.2 },  // 15m 23m
+            { name: 'SOL-USDT-SWAP', type: 'LONG', price: 141.8104, baseLeverage: 15, totalMinutes: 6, accuracy: 87.8 },    // 5m 6m
+            { name: 'SUI-USDT-SWAP', type: 'LONG', price: 1.1015, baseLeverage: 15, totalMinutes: 6, accuracy: 93.5 },     // 5m 6m
+            { name: 'ETH-USDT-SWAP', type: 'LONG', price: 2434.3111, baseLeverage: 15, totalMinutes: 6, accuracy: 89.6 },    // 5m 6m
+            { name: 'XRP-USDT-SWAP', type: 'LONG', price: 0.5326, baseLeverage: 15, totalMinutes: 6, accuracy: 79.4 }     // 5m 6m
         ];
 
-        let priceHistory = Array.from({length: 40}, () => 1.09 + Math.random()*0.02);
+        let priceHistory = Array.from({length: 40}, () => 83100 + Math.random()*50);
 
         function showToast(message, isWin) {
             const container = document.getElementById('toast-container');
@@ -171,6 +172,18 @@
             document.getElementById('val-winrate').innerText = rate + '% 📈';
         }
 
+        // Вспомогательная функция перевода минут в красивый формат Lovable (например, 3ч 36м)
+        function formatMinutesToTime(totalMin) {
+            if (totalMin <= 0) return "0м";
+            const hours = Math.floor(totalMin / 60);
+            const mins = totalMin % 60;
+            if (hours > 0) {
+                return `${hours}ч ${mins}м`;
+            } else {
+                return `${mins}м`;
+            }
+        }
+
         function renderGrid() {
             const container = document.getElementById('coins-container'); container.innerHTML = '';
             COINS.forEach((coin, idx) => {
@@ -185,7 +198,23 @@
                     priceHistory = Array.from({length: 40}, () => coin.price * (0.997 + Math.random()*0.006));
                     renderGrid(); updateDetailBlock();
                 };
-                card.innerHTML = `<div class="coin-header"><div class="coin-name">${coin.name} <span style="color:#848e9c; font-size:11px;">${activeTF}</span></div><div class="${coin.type==='LONG'?'badge-long':'badge-short'}">${coin.type}</div></div><div class="coin-price" style="color:${coin.type==='LONG'?'#00b159':'#ff3b30'}">${coin.price.toFixed(4)}</div><div style="font-size:11px; display:flex; justify-content:space-between; color:#848e9c;"><span>⏱ ${coin.timer}с</span></div><div class="mini-graph">${barsHtml}</div>`;
+
+                let durationText = formatMinutesToTime(coin.totalMinutes);
+
+                card.innerHTML = `
+                    <div class="coin-header">
+                        <div class="coin-name">${coin.name} <span style="color:#848e9c; font-size:11px;">${activeTF}</span></div>
+                        <div style="display:flex; gap:4px;">
+                            <span class="badge-accuracy">🎯 ${coin.accuracy.toFixed(1)}%</span>
+                            <span class="${coin.type==='LONG'?'badge-long':'badge-short'}">${coin.type}</span>
+                        </div>
+                    </div>
+                    <div class="coin-price" style="color:${coin.type==='LONG'?'#00b159':'#ff3b30'}">${coin.price.toFixed(4)}</div>
+                    <div style="font-size:11px; display:flex; justify-content:space-between; color:#848e9c;">
+                        <span>⏱ Время тренда: <strong style="color:#f59e0b;">${durationText}</strong></span>
+                    </div>
+                    <div class="mini-graph">${barsHtml}</div>
+                `;
                 container.appendChild(card);
             });
         }
@@ -197,7 +226,7 @@
             const marginUsdt = (deposit * (riskPercent / 100)).toFixed(2);
             const totalVolumeUsdt = (marginUsdt * customLeverage).toFixed(2);
 
-            document.getElementById('det-name').innerHTML = `${coin.name} <span class="${coin.type==='LONG'?'badge-long':'badge-short'}">${coin.type}</span>`;
+            document.getElementById('det-name').innerHTML = `${coin.name} <span class="${coin.type==='LONG'?'badge-long':'badge-short'}">${coin.type}</span> &nbsp;<span class="badge-accuracy">Точность сигнала: ${coin.accuracy.toFixed(1)}%</span>`;
             document.getElementById('det-price').innerText = coin.price.toFixed(5);
 
             let step = coin.price * 0.005, entry = coin.price * 1.0001, sl, tp1, tp2;
@@ -209,11 +238,13 @@
                 document.getElementById('slider-pt').style.left = '65%'; 
             }
 
+            let durationText = formatMinutesToTime(coin.totalMinutes);
+
             document.getElementById('det-info-rows').innerHTML = `
-                • ${activeTF} · BYBIT Терминал<br>
+                • ${activeTF} · BYBIT Аналитика Живого Тренда<br>
                 • Маржа ордера: <span style="color:#ffffff; font-weight:700;">${marginUsdt} USDT</span> (Объём: ${totalVolumeUsdt} $)<br>
-                • Рекомендуемое плечо: <span style="color:#00b159; font-weight:700;">${customLeverage}x</span><br>
-                <div class="badge-timer-inline">⏱ ${coin.timer}с на вход в сделку</div>
+                • Сила сигнала: <span style="color:#f59e0b; font-weight:700;">${coin.accuracy.toFixed(1)}%</span> (EMA + RSI Пересечение)<br>
+                <div class="badge-timer-inline">⏱ Сигнал активен ещё: ${durationText}</div>
             `;
 
             document.getElementById('lbl-sl').innerText = sl.toFixed(5); document.getElementById('lbl-entry').innerText = entry.toFixed(5);
@@ -251,21 +282,16 @@
             updateDetailBlock();
         }
 
+        // Каждую секунду: симуляция движения цены Bybit
         setInterval(() => {
             if (!isRunning) return;
             let multiplier = activeTF === '1m' ? 0.0015 : activeTF === '5m' ? 0.0008 : 0.0004;
             COINS.forEach((coin, idx) => {
                 coin.price += (Math.random() - 0.5) * (coin.price * multiplier);
-                
-                if (coin.timer > 0) { coin.timer--; } 
-                else { 
-                    coin.timer = 40; 
-                    coin.type = Math.random() > 0.5 ? 'LONG' : 'SHORT';
-                    try { audioAlert.play(); } catch(e){}
-                }
 
+                // Имитация закрытия сделок в журнале по ходу удержания тренда
                 if (Math.random() > 0.9985) { 
-                    if (Math.random() > 0.15) {
+                    if (Math.random() * 100 < coin.accuracy) {
                         wins++; localStorage.setItem('trader_wins', wins);
                         showToast(`💰 Позиция ${coin.name} закрыта по Take-Profit 1!`, true);
                     } else {
@@ -280,6 +306,23 @@
             renderGrid(); updateDetailBlock();
             document.getElementById('count-scanned').innerText = Math.floor(Math.random() * 4) + 13;
         }, 1000);
+
+        // Каждую МИНУТУ (60 секунд): плавно уменьшаем время жизни тренда
+        setInterval(() => {
+            if (!isRunning) return;
+            COINS.forEach((coin) => {
+                if (coin.totalMinutes > 1) {
+                    coin.totalMinutes--;
+                } else {
+                    // Время сигнала вышло — бот переворачивает или обновляет тренд монеты
+                    coin.totalMinutes = Math.floor(Math.random() * 180) + 10; // Новый тренд от 10м до 3 часов
+                    coin.type = Math.random() > 0.5 ? 'LONG' : 'SHORT';
+                    coin.accuracy = 70 + Math.random() * 25;
+                    try { audioAlert.play(); } catch(e){}
+                    showToast(`🚨 Бот обнаружил новый сильный тренд по ${coin.name}!`, true);
+                }
+            });
+        }, 60000);
 
         function toggleBot() {
             const btn = document.getElementById('main-btn');
