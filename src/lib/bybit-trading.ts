@@ -84,8 +84,8 @@ export function normalizeSymbol(sym: string) {
 
 function roundStep(v: number, step: string) {
   const st = Number(step) || 0.001;
-  const decimals = (step.split(".")[1] ?? "").replace(/0+$/, "").length || (step.includes(".") ? step.split(".")[1].length : 0);
-  return (Math.floor(v / st) * st).toFixed(decimals);
+  const decimals = (step.split(".")[1] ?? "").replace(/0+$/, "").length;
+  return (Math.floor(v / st + 1e-9) * st).toFixed(decimals);
 }
 
 export async function placeLinearMarketOrder(
@@ -113,10 +113,10 @@ export async function placeLinearMarketOrder(
     positionIdx: 0,
   };
   if (p.takeProfit && p.stopLoss) {
-    body.takeProfit = roundStep(p.takeProfit, tick);
-    body.stopLoss = roundStep(p.stopLoss, tick);
-    body.tpTriggerBy = "LastPrice";
-    body.slTriggerBy = "LastPrice";
+    body["takeProfit"] = roundStep(p.takeProfit, tick);
+    body["stopLoss"] = roundStep(p.stopLoss, tick);
+    body["tpTriggerBy"] = "LastPrice";
+    body["slTriggerBy"] = "LastPrice";
   }
   const res = await privatePost(c, "/v5/order/create", body);
   if (res.retCode !== 0) throw new Error(`Bybit: ${res.retMsg} (${res.retCode})`);
