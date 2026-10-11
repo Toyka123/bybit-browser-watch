@@ -202,8 +202,16 @@
                     renderGrid(); updateDetailBlock();
                 };
                 if (currentMode === 'signals') {
-                    let timerText = coin.isNew ? '⏱ Вход: ' + coin.prepSeconds + 'с' : '⏱ Тренд: ' + formatMinutesToTime(coin.totalMinutes);
-                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:' + (coin.isNew ? '#fff' : (coin.type==='LONG'?'#00b159':'#ff3b30')) + '">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
+                    let timerText = '';
+                    if (coin.isNew) {
+                        timerText = '⏱ Вход: ' + coin.prepSeconds + 'с';
+                    } else {
+                        let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
+                        let hh = exitTime.getHours(); let mm = exitTime.getMinutes();
+                        if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
+                        timerText = '⏱ Тренд: ' + formatMinutesToTime(coin.totalMinutes) + ' (Выход в ' + hh + ':' + mm + ')';
+                    }
+                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:' + (coin.isNew ? '#fff' : (coin.type==='LONG'?'#00b159':'#ff3b30')) + '">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.8; white-space:nowrap;">' + timerText + '</div>';
                 } else {
                     let timerText = coin.isNew ? '⏱ Окно: ' + coin.prepSeconds + 'с' : '⏱ Спред: ' + formatMinutesToTime(coin.arbMinutes);
                     card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(1) + '%</span></div></div><div class="coin-price" style="color:#f59e0b;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
@@ -231,8 +239,11 @@
                 if (coin.type === "SHORT") { percentage = 100 - percentage; }
                 if (percentage < 0) percentage = 0; if (percentage > 100) percentage = 100;
                 document.getElementById("slider-pt").style.left = percentage.toFixed(1) + "%";
-                let durationText = coin.isNew ? "ВХОД ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Сигнал активен ещё: " + formatMinutesToTime(coin.totalMinutes);
-                document.getElementById("det-info-rows").innerHTML = "• Живой Трекинг Целей Bybit<br>• Маржа ордера: " + marginUsdt + " USDT (Объём: " + totalVolumeUsdt + " $)<br>• Выбранное ботом плечо: " + coin.leverage + "x<br>⏱ " + durationText;
+                let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
+                let hh = exitTime.getHours(); let mm = exitTime.getMinutes();
+                if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
+                let durationText = coin.isNew ? "ВХОД ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.totalMinutes) + ")";
+                document.getElementById("det-info-rows").innerHTML = "• Живой Трекинг Целей Bybit<br>• Marsa: " + marginUsdt + " USDT (Volume: " + totalVolumeUsdt + " $)<br>• Выбранное ботом плечо: " + coin.leverage + "x<br>⏱ " + durationText;
                 document.getElementById("lbl-sl").innerText = sl.toFixed(5); document.getElementById("lbl-entry").innerText = entry.toFixed(5);
                 document.getElementById("lbl-tp1").innerText = tp1.toFixed(5); document.getElementById("lbl-tp2").innerText = tp2.toFixed(5);
                 document.getElementById("box-entry").innerText = entry.toFixed(5); document.getElementById("box-sl").innerText = sl.toFixed(5);
