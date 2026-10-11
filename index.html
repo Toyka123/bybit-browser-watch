@@ -25,13 +25,10 @@
         .stat-title { font-size: 11px; text-transform: uppercase; color: #848e9c; margin-bottom: 8px; font-weight: 700; }
         .stat-value { font-size: 24px; font-weight: 700; font-family: monospace; }
         .coins-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-        
         .coin-card { background: #12161c; border: 1px solid #1f2630; border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; border: 1px solid #1f2630; transition: background-color 0.4s, border-color 0.2s; }
         .coin-card:hover { border-color: #f7a600; }
-        
         .coin-card.new-signal { background-color: #cc7a00 !important; border-color: #ff9400 !important; color: #ffffff !important; animation: pulseGlow 1.5s infinite alternate; }
         @keyframes pulseGlow { from { box-shadow: 0 0 4px rgba(255,148,0,0.4); } to { box-shadow: 0 0 14px rgba(255,148,0,0.8); } }
-        
         .coin-header { display: flex; justify-content: space-between; align-items: center; }
         .coin-name { font-weight: 700; font-size: 14px; font-family: monospace; }
         .badge-short { background: rgba(255, 59, 48, 0.1); color: #ff3b30; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
@@ -145,7 +142,6 @@
         let wins = parseInt(localStorage.getItem('trader_wins')) || 0;
         let losses = parseInt(localStorage.getItem('trader_losses')) || 0;
 
-        // Бот теперь сам хранит индивидуальное автоматическое плечо (leverage) для каждого сигнала
         const COINS = [
             { name: 'LTC-USDT-SWAP', type: 'SHORT', price: 64.1520, leverage: 10, totalMinutes: 276, accuracy: 74.5, isNew: false, prepSeconds: 0 },
             { name: 'ATOM-USDT-SWAP', type: 'SHORT', price: 6.9110, leverage: 10, totalMinutes: 96, accuracy: 82.3, isNew: false, prepSeconds: 0 },
@@ -196,35 +192,15 @@
                 const card = document.createElement('div');
                 card.className = 'coin-card' + (coin.isNew ? ' new-signal' : '');
                 if(idx === selectedCoinIndex) card.style.borderColor = '#00b159';
-                
                 let barsHtml = '';
-                for(let i=0; i<15; i++) {
-                    barsHtml += `<div class="graph-bar" style="height:${Math.floor(Math.random()*20)+5}px;"></div>`;
-                }
-                
+                for(let i=0; i<15; i++) { barsHtml += `<div class="graph-bar" style="height:${Math.floor(Math.random()*20)+5}px;"></div>`; }
                 card.onclick = () => {
                     selectedCoinIndex = idx;
                     priceHistory = Array.from({length: 40}, () => coin.price * (0.997 + Math.random()*0.006));
                     renderGrid(); updateDetailBlock();
                 };
-
-                let timerText = coin.isNew 
-                    ? `⏱ Вход через: ${coin.prepSeconds}с` 
-                    : `⏱ Время тренда: ${formatMinutesToTime(coin.totalMinutes)}`;
-
-                card.innerHTML = `
-                    <div class="coin-header">
-                        <div class="coin-name">${coin.name} <span style="font-size:11px; opacity:0.7;">${activeTF}</span></div>
-                        <div style="display:flex; gap:4px;">
-                            <span class="badge-accuracy" style="background:rgba(255,255,255,0.15); color:#fff; font-weight:700;">${coin.leverage}x</span>
-                            <span class="badge-accuracy">🎯 ${coin.accuracy.toFixed(1)}%</span>
-                            <span class="${coin.type==='LONG'?'badge-long':'badge-short'}">${coin.type}</span>
-                        </div>
-                    </div>
-                    <div class="coin-price" style="color:${coin.isNew ? '#fff' : (coin.type==='LONG'?'#00b159':'#ff3b30')}">${coin.price.toFixed(4)}</div>
-                    <div style="font-size:11px; font-weight:600;">${timerText}</div>
-                    <div class="mini-graph">${barsHtml}</div>
-                `;
+                let timerText = coin.isNew ? `⏱ Вход через: ${coin.prepSeconds}с` : `⏱ Тренд: ${formatMinutesToTime(coin.totalMinutes)}`;
+                card.innerHTML = `<div class="coin-header"><div class="coin-name">${coin.name} <span style="font-size:11px; opacity:0.7;">${activeTF}</span></div><div style="display:flex; gap:4px;"><span class="badge-accuracy" style="background:rgba(255,255,255,0.15); color:#fff; font-weight:700;">${coin.leverage}x</span><span class="badge-accuracy">🎯 ${coin.accuracy.toFixed(1)}%</span><span class="${coin.type==='LONG'?'badge-long':'badge-short'}">${coin.type}</span></div></div><div class="coin-price" style="color:${coin.isNew ? '#fff' : (coin.type==='LONG'?'#00b159':'#ff3b30')}">${coin.price.toFixed(4)}</div><div style="font-size:11px; font-weight:600;">${timerText}</div><div class="mini-graph">${barsHtml}</div>`;
                 container.appendChild(card);
             });
         }
@@ -232,8 +208,6 @@
             const coin = COINS[selectedCoinIndex];
             const deposit = parseFloat(document.getElementById('input-deposit').value) || 1000;
             const riskPercent = parseFloat(document.getElementById('input-risk').value) || 1;
-            
-            // Маржа и объем рассчитываются строго на основе автоматического плеча монеты
             const marginUsdt = (deposit * (riskPercent / 100)).toFixed(2);
             const totalVolumeUsdt = (marginUsdt * coin.leverage).toFixed(2);
             const detailCard = document.getElementById('main-detail-card');
@@ -245,25 +219,11 @@
             document.getElementById('det-price').innerText = coin.price.toFixed(5);
 
             let step = coin.price * 0.005, entry = coin.price * 1.0001, sl, tp1, tp2;
-            if(coin.type === 'LONG') { 
-                sl = entry - step; tp1 = entry + step; tp2 = entry + step * 1.9; 
-                document.getElementById('slider-pt').style.left = '35%'; 
-            } else { 
-                sl = entry + step; tp1 = entry - step; tp2 = entry - step * 1.9; 
-                document.getElementById('slider-pt').style.left = '65%'; 
-            }
+            if(coin.type === 'LONG') { sl = entry - step; tp1 = entry + step; tp2 = entry + step * 1.9; document.getElementById('slider-pt').style.left = '35%'; }
+            else { sl = entry + step; tp1 = entry - step; tp2 = entry - step * 1.9; document.getElementById('slider-pt').style.left = '65%'; }
 
-            let durationText = coin.isNew 
-                ? `ВХОД ЧЕРЕЗ: ${coin.prepSeconds}с (ПОДГОТОВКА ОРДЕРА)` 
-                : `Сигнал активен ещё: ${formatMinutesToTime(coin.totalMinutes)}`;
-
-            document.getElementById('det-info-rows').innerHTML = `
-                • ${activeTF} · BYBIT Автоматическое Управление Риском<br>
-                • Маржа ордера: <span style="font-weight:700;">${marginUsdt} USDT</span> (Объём позиции: ${totalVolumeUsdt} $)<br>
-                • Выбранное ботом плечо: <span style="color:#00b159; font-weight:700;">${coin.leverage}x</span> (Рассчитано под волатильность)<br>
-                <div class="badge-timer-inline">⏱ ${durationText}</div>
-            `;
-
+            let durationText = coin.isNew ? `ВХОД ЧЕРЕЗ: ${coin.prepSeconds}с (ПОДГОТОВКА ОРДЕРА)` : `Сигнал активен ещё: ${formatMinutesToTime(coin.totalMinutes)}`;
+            document.getElementById('det-info-rows').innerHTML = `• ${activeTF} · BYBIT Автоматическое Управление Риском<br>• Маржа ордера: <span style="font-weight:700;">${marginUsdt} USDT</span> (Объём позиции: ${totalVolumeUsdt} $)<br>• Выбранное ботом плечо: <span style="color:#00b159; font-weight:700;">${coin.leverage}x</span><br><div class="badge-timer-inline">⏱ ${durationText}</div>`;
             document.getElementById('lbl-sl').innerText = sl.toFixed(5); document.getElementById('lbl-entry').innerText = entry.toFixed(5);
             document.getElementById('lbl-tp1').innerText = tp1.toFixed(5); document.getElementById('lbl-tp2').innerText = tp2.toFixed(5);
             document.getElementById('box-entry').innerText = entry.toFixed(5); document.getElementById('box-sl').innerText = sl.toFixed(5);
@@ -281,21 +241,23 @@
             let getX = (i) => (canvas.width / (priceHistory.length - 1)) * i;
             let getY = (v) => canvas.height - ((v - min) / range) * canvas.height;
 
-            let ema9 =, ema21 =, k9 = 2/10, k21 = 2/22, p9 = priceHistory, p21 = priceHistory;
+            // Сверхнадежное создание массивов для обхода ограничений чата
+            let ema9 = new Array(), ema21 = new Array();
+            let k9 = 2/10, k21 = 2/22, p9 = priceHistory[0], p21 = priceHistory[0];
             priceHistory.forEach(p => { p9 = p * k9 + p9 * (1 - k9); p21 = p * k21 + p21 * (1 - k21); ema9.push(p9); ema21.push(p21); });
 
-            ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory));
+            ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory[0]));
             for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i])); ctx.stroke();
-            ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(getX(0), getY(ema9));
+            ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(getX(0), getY(ema9[0]));
             for(let i=1; i<ema9.length; i++) ctx.lineTo(getX(i), getY(ema9[i])); ctx.stroke();
-            ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(getX(0), getY(ema21));
+            ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(getX(0), getY(ema21[0]));
             for(let i=1; i<ema21.length; i++) ctx.lineTo(getX(i), getY(ema21[i])); ctx.stroke();
         }
 
         function changeTF(tf) {
             activeTF = tf;
             document.querySelectorAll('.tf-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`tf-${tf}`).classList.add('active');
+            document.getElementById('tf-' + tf).classList.add('active');
             updateDetailBlock();
         }
 
@@ -304,27 +266,24 @@
             let multiplier = activeTF === '1m' ? 0.0015 : activeTF === '5m' ? 0.0008 : 0.0004;
             COINS.forEach((coin, idx) => {
                 coin.price += (Math.random() - 0.5) * (coin.price * multiplier);
-
                 if (coin.isNew && coin.prepSeconds > 0) {
                     coin.prepSeconds--;
                     if (coin.prepSeconds === 0) {
                         coin.isNew = false;
                         coin.totalMinutes = Math.floor(Math.random() * 120) + 15;
-                        showToast(`🚀 ТАЙМЕР ИСТЁК: Ордер по ${coin.name} запущен в работу!`, true);
+                        showToast('🚀 ТАЙМЕР ИСТЁК: Ордер по ' + coin.name + ' запущен!', true);
                     }
                 }
-
                 if (Math.random() > 0.9985 && !coin.isNew) { 
                     if (Math.random() * 100 < coin.accuracy) {
                         wins++; localStorage.setItem('trader_wins', wins);
-                        showToast(`💰 Позиция ${coin.name} закрыта по Take-Profit 1!`, true);
+                        showToast('💰 Позиция ' + coin.name + ' закрыта по Тейк-Профиту!', true);
                     } else {
                         losses++; localStorage.setItem('trader_losses', losses);
-                        showToast(`🛑 Позиция ${coin.name} закрыта по Stop-Loss.`, false);
+                        showToast('🛑 Позиция ' + coin.name + ' закрыта по Стоп-Лоссу.', false);
                     }
                     updateStatsUI();
                 }
-
                 if(idx === selectedCoinIndex) { priceHistory.shift(); priceHistory.push(coin.price); }
             });
             renderGrid(); updateDetailBlock();
@@ -335,20 +294,15 @@
             if (!isRunning) return;
             COINS.forEach((coin) => {
                 if (!coin.isNew) {
-                    if (coin.totalMinutes > 1) {
-                        coin.totalMinutes--;
-                    } else {
-                        coin.isNew = true;
-                        coin.prepSeconds = 40;
+                    if (coin.totalMinutes > 1) { coin.totalMinutes--; } 
+                    else {
+                        coin.isNew = true; coin.prepSeconds = 40;
                         coin.type = Math.random() > 0.5 ? 'LONG' : 'SHORT';
                         coin.accuracy = 70 + Math.random() * 25;
-                        
-                        // Бот автоматически подбирает случайное оптимальное плечо: 5x, 10x, 15x, 20x или 25x!
-                        const leverageOptions =;
-                        coin.leverage = leverageOptions[Math.floor(Math.random() * leverageOptions.length)];
-
+                        let opts =;
+                        coin.leverage = opts[Math.floor(Math.random() * opts.length)];
                         try { audioAlert.play(); } catch(e){}
-                        showToast(`🚨 СВЕЖИЙ СИГНАЛ: ${coin.name} в зоне подготовки 40с!`, true);
+                        showToast('🚨 СВЕЖИЙ СИГНАЛ: ' + coin.name + ' в зоне подготовки 40с!', true);
                     }
                 }
             });
