@@ -1,150 +1,124 @@
-import { Buffer } from 'buffer';
+// Bybit V5 trading helpers (browser-side: Bybit geo-blocks server IPs).
 
-// Функция для безопасного шифрования ключей в браузере (AES-GCM)
+const BASE = "https://api.bybit.com";
+export const credentialsStorageKey = "bybit-encrypted-credentials-v1";
+
+export type ApiCredentials = { apiKey: string; apiSecret: string };
+export type EncryptedCredentials = { v: 1; data: string };
+
+async function deriveKey(password: string, salt: Uint8Array, usage: KeyUsage) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: salt as BufferSource, iterations: 100000, hash: "SHA-256" },
+    base,
+    { name: "AES-GCM", length: 256 },
+    false,
+    [usage],
+  );
+}
+
 export async function encryptData(text: string, password: string): Promise<string> {
-  const encoder = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  const passwordKey = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(password),
-    { name: 'PBKDF2' },
-    false,
-    ['deriveKey']
-  );
-  
-  const key = await crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: salt,
-      iterations: 100000,
-      hash: 'SHA-256'
-    },
-    passwordKey,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt']
-  );
-
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: iv },
-    key,
-    encoder.encode(text)
-  );
-
-  const result = new Uint8Array( salt.length + iv.length + encrypted.byteLength );
-  result.set(salt, 0);
-  result.set(iv, salt.length);
-  result.set(new Uint8Array(encrypted), salt.length + iv.length);
-  
-  return btoa(String.fromCharCode(...result));
+  const key = await deriveKey(password, salt, "encrypt");
+  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(text));
+  const out = new Uint8Array(28 + encrypted.byteLength);
+  out.set(salt, 0);
+  out.set(iv, 16);
+  out.set(new Uint8Array(encrypted), 28);
+  let bin = "";
+  out.forEach((b) => (bin += String.fromCharCode(b)));
+  return btoa(bin);
 }
 
-// Функция для расшифровки ключей
-export async function decryptData(encryptedBase64: string, password: string): Promise<string> {
-  const binaryString = atob(encryptedBase64);
-  const data = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    data[i] = binaryString.charCodeAt(i);
-  }
-
-  const salt = data.slice(0, 16);
-  const iv = data.slice(16, 28);
-  const encrypted = data.slice(28);
-
-  const encoder = new TextEncoder();
-  const passwordKey = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(password),
-    { name: 'PBKDF2' },
-    false,
-    ['deriveKey']
-  );
-
-  const key = await crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: salt,
-      iterations: 100000,
-      hash: 'SHA-256'
-    },
-    passwordKey,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['decrypt']
-  );
-
-  const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: iv },
-    key,
-    encrypted
-  );
-
-  return new TextDecoder().decode(decrypted);
+export async function decryptData(b64: string, password: string): Promise<string> {
+  const bin = atob(b64);
+  const data = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i);
+  const key = await deriveKey(password, data.slice(0, 16), "decrypt");
+  const dec = await crypto.subtle.decrypt({ name: "AES-GCM", iv: data.slice(16, 28) }, key, data.slice(28));
+  return new TextDecoder().decode(dec);
 }
 
-// Отправка рыночного ордера на Bybit API V5
-export async function placeBybitOrder(params: {
-  apiKey: string;
-  apiSecret: string;
-  symbol: string;
-  side: 'Buy' | 'Sell';
-  qty: string;
-  takeProfit?: string;
-  stopLoss?: string;
-}) {
-  const timestamp = Date.now().toString();
-  const recvWindow = '5000';
-  
-  // Убираем префикс -SWAP для совместимости с Bybit API (например, SOL-USDT-SWAP -> SOLUSDT)
-  const cleanSymbol = params.symbol.replace('-SWAP', '').replace('-', '');
+export async function encryptCredentials(c: ApiCredentials, password: string): Promise<EncryptedCredentials> {
+  return { v: 1, data: await encryptData(JSON.stringify(c), password) };
+}
 
-  const body = {
-    category: 'linear',
-    symbol: cleanSymbol,
-    side: params.side,
-    orderType: 'Market',
-    qty: params.qty,
-    timeInForce: 'GTC',
-    takeProfit: params.takeProfit,
-    stopLoss: params.stopLoss,
-    tpTriggerBy: 'LastPrice',
-    slTriggerBy: 'LastPrice'
-  };
+export async function decryptCredentials(e: EncryptedCredentials, password: string): Promise<ApiCredentials> {
+  const parsed = JSON.parse(await decryptData(e.data, password)) as ApiCredentials;
+  if (!parsed?.apiKey || !parsed?.apiSecret) throw new Error("Invalid credentials");
+  return parsed;
+}
 
-  const reqBody = JSON.stringify(body);
-  const paramStr = timestamp + params.apiKey + recvWindow + reqBody;
+async function sign(secret: string, msg: string) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(msg));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
-  // Генерация подписи HMAC_SHA256 для Bybit V5
-  const cryptoObj = window.crypto;
-  const encoder = new TextEncoder();
-  const keyData = encoder.encode(params.apiSecret);
-  const messageData = encoder.encode(paramStr);
-
-  const cryptoKey = await cryptoObj.subtle.importKey(
-    'raw',
-    keyData,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  
-  const signatureBuffer = await cryptoObj.subtle.sign('HMAC', cryptoKey, messageData);
-  const hashArray = Array.from(new Uint8Array(signatureBuffer));
-  const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-  // Отправляем запрос напрямую на официальный эндпоинт Bybit V5
-  const response = await fetch('https://bybit.com', {
-    method: 'POST',
+async function privatePost(c: ApiCredentials, path: string, body: Record<string, unknown>) {
+  const ts = Date.now().toString();
+  const recv = "5000";
+  const raw = JSON.stringify(body);
+  const signature = await sign(c.apiSecret, ts + c.apiKey + recv + raw);
+  const res = await fetch(BASE + path, {
+    method: "POST",
     headers: {
-      'X-BAPI-API-KEY': params.apiKey,
-      'X-BAPI-SIGN': signature,
-      'X-BAPI-TIMESTAMP': timestamp,
-      'X-BAPI-RECV-WINDOW': recvWindow,
-      'Content-Type': 'application/json'
+      "X-BAPI-API-KEY": c.apiKey,
+      "X-BAPI-SIGN": signature,
+      "X-BAPI-TIMESTAMP": ts,
+      "X-BAPI-RECV-WINDOW": recv,
+      "Content-Type": "application/json",
     },
-    body: reqBody
+    body: raw,
   });
+  return (await res.json()) as { retCode: number; retMsg: string; result: any };
+}
 
-  return await response.json();
+export function normalizeSymbol(sym: string) {
+  const s = sym.toUpperCase().replace(/-SWAP$/, "").replace(/-/g, "");
+  return s.endsWith("USDT") ? s : s + "USDT";
+}
+
+function roundStep(v: number, step: string) {
+  const st = Number(step) || 0.001;
+  const decimals = (step.split(".")[1] ?? "").replace(/0+$/, "").length;
+  return (Math.floor(v / st + 1e-9) * st).toFixed(decimals);
+}
+
+export async function placeLinearMarketOrder(
+  c: ApiCredentials,
+  p: { symbol: string; side: "LONG" | "SHORT"; qty: number; leverage: number; takeProfit?: number; stopLoss?: number },
+) {
+  const symbol = normalizeSymbol(p.symbol);
+  const info = await fetch(`${BASE}/v5/market/instruments-info?category=linear&symbol=${symbol}`).then((r) => r.json());
+  const inst = info?.result?.list?.[0];
+  if (!inst) throw new Error(`Инструмент ${symbol} не найден на Bybit.`);
+  const qty = roundStep(p.qty, inst.lotSizeFilter.qtyStep);
+  if (Number(qty) < Number(inst.lotSizeFilter.minOrderQty)) throw new Error(`Количество меньше минимума (${inst.lotSizeFilter.minOrderQty}).`);
+  const tick = inst.priceFilter.tickSize as string;
+
+  const lev = String(Math.round(p.leverage));
+  const levRes = await privatePost(c, "/v5/position/set-leverage", { category: "linear", symbol, buyLeverage: lev, sellLeverage: lev });
+  if (levRes.retCode !== 0 && levRes.retCode !== 110043) throw new Error(`Плечо: ${levRes.retMsg}`);
+
+  const body: Record<string, unknown> = {
+    category: "linear",
+    symbol,
+    side: p.side === "LONG" ? "Buy" : "Sell",
+    orderType: "Market",
+    qty,
+    positionIdx: 0,
+  };
+  if (p.takeProfit && p.stopLoss) {
+    body["takeProfit"] = roundStep(p.takeProfit, tick);
+    body["stopLoss"] = roundStep(p.stopLoss, tick);
+    body["tpTriggerBy"] = "LastPrice";
+    body["slTriggerBy"] = "LastPrice";
+  }
+  const res = await privatePost(c, "/v5/order/create", body);
+  if (res.retCode !== 0) throw new Error(`Bybit: ${res.retMsg} (${res.retCode})`);
+  return { symbol, qty, orderId: res.result.orderId as string };
 }
