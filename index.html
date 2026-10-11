@@ -25,9 +25,8 @@
         .stat-title { font-size: 11px; text-transform: uppercase; color: #848e9c; margin-bottom: 8px; font-weight: 700; }
         .stat-value { font-size: 24px; font-weight: 700; font-family: monospace; }
         
-        /* Компактные колонки под широкие экраны */
+        /* Исправление гигантских квадратов: адаптивная плитка монет */
         .coins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
-        
         .coin-card { background: #12161c; border: 1px solid #1f2630; border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; border: 1px solid #1f2630; transition: background-color 0.4s, border-color 0.2s; overflow: hidden; }
         .coin-card:hover { border-color: #f7a600; }
         .coin-card.new-signal { background-color: #cc7a00 !important; border-color: #ff9400 !important; color: #ffffff !important; }
@@ -201,18 +200,17 @@
                 };
                 if (currentMode === 'signals') {
                     let timerText = '';
-                    if (coin.isNew) {
-                        timerText = '⏱ Вход: ' + coin.prepSeconds + 'с';
-                    } else {
+                    if (coin.isNew) { timerText = '⏱ Вход: ' + coin.prepSeconds + 'с'; } 
+                    else {
                         let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
-                        let hh = exitTime.getHours(); let mm = exitTime.getMinutes();
+                        let hh = exitTime.getHours(), mm = exitTime.getMinutes();
                         if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
                         timerText = '⏱ Тренд: ' + formatMinutesToTime(coin.totalMinutes) + ' (Выход в ' + hh + ':' + mm + ')';
                     }
                     card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:' + (coin.isNew ? '#fff' : (coin.type==='LONG'?'#00b159':'#ff3b30')) + '">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.8; white-space:nowrap;">' + timerText + '</div>';
                 } else {
                     let timerText = coin.isNew ? '⏱ Окно: ' + coin.prepSeconds + 'с' : '⏱ Спред: ' + formatMinutesToTime(coin.arbMinutes);
-                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(1) + '%</span></div></div><div class="coin-price" style="color:#f59e0b;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
+                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:4px;"><span class="badge-spread">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(1) + '%</span></div></div><div class="coin-price" style="color:#f59e0b;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
                 }
                 container.appendChild(card);
             });
@@ -225,6 +223,7 @@
             const totalVolumeUsdt = (marginUsdt * coin.leverage).toFixed(2);
             const detailCard = document.getElementById('main-detail-card');
             if (coin.isNew) { detailCard.classList.add('orange-alert'); } else { detailCard.classList.remove('orange-alert'); }
+            
             if (currentMode === 'signals') {
                 document.getElementById('slider-wrapper-zone').style.setProperty('display', 'block', 'important');
                 document.getElementById('target-boxes-zone').style.setProperty('display', 'grid', 'important');
@@ -238,7 +237,7 @@
                 if (percentage < 0) percentage = 0; if (percentage > 100) percentage = 100;
                 document.getElementById("slider-pt").style.left = percentage.toFixed(1) + "%";
                 let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
-                let hh = exitTime.getHours(); let mm = exitTime.getMinutes();
+                let hh = exitTime.getHours(), mm = exitTime.getMinutes();
                 if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
                 let durationText = coin.isNew ? "ВХОД ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.totalMinutes) + ")";
                 document.getElementById("det-info-rows").innerHTML = "• Живой Трекинг Целей Bybit<br>• Маржа ордера: " + marginUsdt + " USDT (Объём: " + totalVolumeUsdt + " $)<br>• Выбранное ботом плечо: " + coin.leverage + "x<br>⏱ " + durationText;
@@ -248,25 +247,44 @@
                 document.getElementById("box-tp1").innerText = tp1.toFixed(5); document.getElementById("box-tp2").innerText = tp2.toFixed(5);
                 drawChartSignals(sl, entry, tp1, tp2);
             } else {
-                document.getElementById('slider-wrapper-zone').style.setProperty('display', 'none', 'important');
-                document.getElementById('target-boxes-zone').style.setProperty('display', 'none', 'important');
-                let coinTicker = coin.name.split('-')[0];
-                document.getElementById("det-name").innerHTML = '🔄 АРБИТРАЖНАЯ СВЯЗКА: ' + coinTicker + '/USDT';
-                document.getElementById("det-price").innerText = "+" + coin.spread.toFixed(2) + "%";
-                let halfMargin = (marginUsdt / 2).toFixed(2);
-                let totalTokens = ((halfMargin * coin.leverage) / coin.price).toFixed(1);
-                let exitTime = new Date(Date.now() + coin.arbMinutes * 60000);
-                let hh = exitTime.getHours(); let mm = exitTime.getMinutes();
-                if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
-                let durationText = coin.isNew ? "ОКНО ЗАКРОЕТСЯ ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Спред активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.arbMinutes) + ")";
-                
-                let b1Block = "<div style='background:rgba(0,177,89,0.08); border-left:4px solid #00b159; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#00b159; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 1 · КУПИТЬ СПОТ</span><div style='font-size:13px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='background:#1f2630; padding:2px 6px; border-radius:4px; color:#f59e0b; font-family:monospace;'>" + coin.b1 + "</span></div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#00b159;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>≈ " + totalTokens + " " + coinTicker + "</div></div></div>";
-                let b2Block = "<div style='background:rgba(255,59,48,0.08); border-left:4px solid #ff3b30; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#ff3b30; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 2 · ОТКРЫТЬ SHORT</span><div style='font-size:13px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='background:#1f2630; padding:2px 6px; border-radius:4px; color:#f59e0b; font-family:monospace;'>" + coin.b2 + "</span></div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#ff3b30;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>Плечо: " + coin.leverage + "x</div></div></div>";
-                let timerBlock = "<div class='badge-timer-inline' style='background:#1f2630; color:#f59e0b; border:1px solid #2d3848; padding:8px 12px; font-size:12px; text-align:center; font-family:monospace; margin-top:4px; border-radius:6px; width:94%; text-transform:uppercase;'>" + durationText + "</div>";
-                
-                document.getElementById("det-info-rows").innerHTML = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:5px; width:100%;'>" + b1Block + b2Block + timerBlock + "</div>";
-                drawChartArbitrage();
+                drawAdvancedArbitrageBlock(coin, marginUsdt);
             }
+        }
+        function drawAdvancedArbitrageBlock(coin, marginUsdt) {
+            document.getElementById('slider-wrapper-zone').style.setProperty('display', 'none', 'important');
+            document.getElementById('target-boxes-zone').style.setProperty('display', 'none', 'important');
+            let coinTicker = coin.name.split('-');
+            document.getElementById("det-name").innerHTML = '🔄 АРБИТРАЖНАЯ СВЯЗКА: ' + coinTicker[0] + '/USDT';
+            document.getElementById("det-price").innerText = "+" + coin.spread.toFixed(2) + "%";
+            
+            let currentArbInput = document.getElementById('input-arb-calc-val') ? parseFloat(document.getElementById('input-arb-calc-val').value) : parseFloat(marginUsdt);
+            if (isNaN(currentArbInput) || currentArbInput <= 0) { currentArbInput = parseFloat(marginUsdt); }
+            
+            let halfMargin = (currentArbInput / 2).toFixed(2);
+            let totalTokens = ((halfMargin * coin.leverage) / coin.price).toFixed(1);
+            let netProfit = (currentArbInput * (coin.spread / 100)).toFixed(2);
+            
+            let exitTime = new Date(Date.now() + coin.arbMinutes * 60000);
+            let hh = exitTime.getHours(), mm = exitTime.getMinutes();
+            if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
+            let durationText = coin.isNew ? "ОКНО ЗАКРОЕТСЯ ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Спред активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.arbMinutes) + ")";
+            let calcBlock = "<div style='background:#1f2630; border:1px solid #2d3848; padding:10px; border-radius:6px; display:flex; flex-direction:column; gap:6px; margin-bottom:4px;'>" +
+                "<div style='display:flex; justify-content:space-between; align-items:center;'>" +
+                    "<label style='font-size:10px; font-weight:700; color:#848e9c;'>СУММА ОРДЕРА, $:</label>" +
+                    "<input type='number' id='input-arb-calc-val' value='" + currentArbInput + "' oninput='updateDetailBlock()' style='width:90px; background:#0b0e11; border:1px solid #2d3848; color:#fff; border-radius:4px; padding:4px 8px; font-size:12px; font-family:monospace; text-align:right; outline:none;'>" +
+                "</div>" +
+                "<div style='display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #2d3848; padding-top:6px; margin-top:2px;'>" +
+                    "<span style='font-size:11px; font-weight:700; color:#eaedf1;'>💰 ЧИСТАЯ ПРИБЫЛЬ:</span>" +
+                    "<span style='font-size:13px; font-weight:900; color:#00b159; font-family:monospace;'>+" + netProfit + " USDT</span>" +
+                "</div>" +
+            "</div>";
+            
+            let b1Block = "<div style='background:rgba(0,177,89,0.08); border-left:4px solid #00b159; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#00b159; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 1 · КУПИТЬ СПОТ</span><div style='font-size:13px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='background:#1f2630; padding:2px 6px; border-radius:4px; color:#f59e0b; font-family:monospace;'>" + coin.b1 + "</span></div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#00b159;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>≈ " + totalTokens + " " + coinTicker[0] + "</div></div></div>";
+            let b2Block = "<div style='background:rgba(255,59,48,0.08); border-left:4px solid #ff3b30; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#ff3b30; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 2 · ОТКРЫТЬ SHORT</span><div style='font-size:13px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='background:#1f2630; padding:2px 6px; border-radius:4px; color:#f59e0b; font-family:monospace;'>" + coin.b2 + "</span></div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#ff3b30;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>Плечо: " + coin.leverage + "x</div></div></div>";
+            let timerBlock = "<div class='badge-timer-inline' style='background:#1f2630; color:#f59e0b; border:1px solid #2d3848; padding:8px 12px; font-size:12px; text-align:center; font-family:monospace; margin-top:4px; border-radius:6px; width:94%; text-transform:uppercase;'>" + durationText + "</div>";
+            
+            document.getElementById("det-info-rows").innerHTML = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:5px; width:100%;'>" + calcBlock + b1Block + b2Block + timerBlock + "</div>";
+            drawChartArbitrage();
         }
         function drawChartSignals(sl, entry, tp1, tp2) {
             const canvas = document.getElementById("liveChart"), ctx = canvas.getContext("2d");
