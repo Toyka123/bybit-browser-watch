@@ -13,7 +13,7 @@
         .mode-btn { background: #1f2630; border: 1px solid #2d3848; color: #848e9c; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
         .mode-btn.active { background: #00b159; color: #fff; border-color: #00b159; box-shadow: 0 0 10px rgba(0,177,89,0.3); }
         .mode-btn#btn-arb-mode.active { background: #f59e0b; border-color: #f59e0b; box-shadow: 0 0 10px rgba(245,158,11,0.3); }
-        main { max-width: 1400px; margin: 24px auto; padding: 0 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; }
+        main { max-width: 1400px; margin: 24px auto; padding: 0 20px; display: flex; flex-direction: column; gap: 20px; }
         .grid-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; background: #12161c; border: 1px solid #1f2630; border-radius: 12px; padding: 20px; }
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #848e9c; }
@@ -25,7 +25,7 @@
         .stat-title { font-size: 11px; text-transform: uppercase; color: #848e9c; margin-bottom: 8px; font-weight: 700; }
         .stat-value { font-size: 24px; font-weight: 700; font-family: monospace; }
         .coins-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-        .coin-card { background: #12161c; border: 1px solid #1f2630; border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; border: 1px solid #1f2630; transition: background-color 0.4s, border-color 0.2s; }
+        .coin-card { background: #12161c; border: 1px solid #1f2630; border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; border: 1px solid #1f2630; transition: background-color 0.4s, border-color 0.2s; }
         .coin-card:hover { border-color: #f7a600; }
         .coin-card.new-signal { background-color: #cc7a00 !important; border-color: #ff9400 !important; color: #ffffff !important; }
         .coin-header { display: flex; justify-content: space-between; align-items: center; }
@@ -35,10 +35,10 @@
         .coin-card.new-signal .badge-short, .coin-card.new-signal .badge-long { background: rgba(255,255,255,0.25); color: #fff; }
         .badge-accuracy, .badge-spread { background: rgba(245, 158, 11, 0.1); color: #f59e0b; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
         .coin-card.new-signal .badge-accuracy, .coin-card.new-signal .badge-spread { background: rgba(255,255,255,0.2); color: #fff; }
-        .coin-price { font-size: 18px; font-weight: 700; font-family: monospace; margin: 2px 0; }
+        .coin-price { font-size: 17px; font-weight: 700; font-family: monospace; margin: 2px 0; }
         .btn-action { border: none; border-radius: 6px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; background-color: #ff3b30; color: #fff; }
         .detail-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; }
-        .detail-card { background: #12161c; border: 1px solid #1f2630; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px; transition: background-color 0.4s; }
+        .detail-card { background: #12161c; border: 1px solid #1f2630; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px; transition: background-color 0.4s; }
         .detail-card.orange-alert { background-color: #995c00; border-color: #ff9400; }
         .detail-header-info { display: flex; justify-content: space-between; align-items: flex-start; }
         .detail-title { font-size: 20px; font-weight: 700; font-family: monospace; display: flex; align-items: center; gap: 12px; }
@@ -138,7 +138,6 @@
         let isRunning = true, selectedCoinIndex = 13, activeTF = '15m', currentMode = 'signals';
         const audioAlert = new Audio('https://mixkit.co');
         audioAlert.volume = 0.8;
-        
         let wins = parseInt(localStorage.getItem('trader_wins')) || 0;
         let losses = parseInt(localStorage.getItem('trader_losses')) || 0;
 
@@ -169,8 +168,8 @@
                 document.getElementById('label-total-signals').innerText = "58";
                 document.getElementById('label-total-signals').style.color = "#00b159";
                 document.getElementById('det-price-lbl').innerText = "Текущая цена";
-                document.getElementById('slider-wrapper-zone').style.display = "block";
-                document.getElementById('target-boxes-zone').style.display = "grid";
+                document.getElementById('slider-wrapper-zone').style.setProperty('display', 'block', 'important');
+                document.getElementById('target-boxes-zone').style.setProperty('display', 'grid', 'important');
                 document.getElementById('tf-zone').style.display = "flex";
                 document.getElementById('legends-zone').innerHTML = '<div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div>Цена</div><div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div>EMA 9</div><div class="legend-item"><div class="legend-dot" style="background:#a855f7;"></div>EMA 21</div>';
             } else {
@@ -178,8 +177,8 @@
                 document.getElementById('label-total-signals').innerText = "24 Связки";
                 document.getElementById('label-total-signals').style.color = "#f59e0b";
                 document.getElementById('det-price-lbl').innerText = "Разрыв цен (Спред)";
-                document.getElementById('slider-wrapper-zone').style.display = "none";
-                document.getElementById('target-boxes-zone').style.display = "none";
+                document.getElementById('slider-wrapper-zone').style.setProperty('display', 'none', 'important');
+                document.getElementById('target-boxes-zone').style.setProperty('display', 'none', 'important');
                 document.getElementById('tf-zone').style.display = "none";
                 document.getElementById('legends-zone').innerHTML = '<div class="legend-item"><div class="legend-dot" style="background:#00b159;"></div>Биржа Покупки</div><div class="legend-item"><div class="legend-dot" style="background:#ff3b30;"></div>Биржа Шорта</div>';
             }
@@ -199,6 +198,12 @@
             let total = wins + losses;
             let rate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
             document.getElementById('val-winrate').innerText = rate + '% 📈';
+        }
+        function formatMinutesToTime(totalMin) {
+            if (totalMin <= 0) return "0м";
+            const hours = Math.floor(totalMin / 60);
+            const mins = totalMin % 60;
+            return hours > 0 ? hours + 'ч ' + mins + 'м' : mins + 'м';
         }
 
         function renderGrid() {
@@ -220,6 +225,7 @@
                 container.appendChild(card);
             });
         }
+
         function updateDetailBlock() {
             const coin = COINS[selectedCoinIndex];
             const deposit = parseFloat(document.getElementById('input-deposit').value) || 1000;
@@ -241,7 +247,7 @@
                 if (percentage < 0) percentage = 0; if (percentage > 100) percentage = 100;
                 document.getElementById("slider-pt").style.left = percentage.toFixed(1) + "%";
                 let durationText = coin.isNew ? "ВХОД ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Сигнал активен ещё: " + formatMinutesToTime(coin.totalMinutes);
-                document.getElementById("det-info-rows").innerHTML = "• " + activeTF + " · BYBIT Живой Трекинг Целей<br>• Маржа ордера: <span style='font-weight:700;'>" + marginUsdt + " USDT</span> (Объём позиции: " + totalVolumeUsdt + " $)<br>• Выбранное ботом плечо: <span style='color:#00b159; font-weight:700;'>" + coin.leverage + "x</span><br><div class='badge-timer-inline'>⏱ " + durationText + "</div>";
+                document.getElementById("det-info-rows").innerHTML = "• " + activeTF + " · BYBIT Живой Трекинг Целей<br>• Маржа ордера: <span style='font-weight:700;'>" + marginUsdt + " USDT</span> (Объём позиции: " + totalVolumeUsdt + " $)<br>• Выбранное ботом плечо: <span style='color:#00b159; font-weight:700;'> " + coin.leverage + "x</span><br><div class='badge-timer-inline'>⏱ " + durationText + "</div>";
                 document.getElementById("lbl-sl").innerText = sl.toFixed(5); document.getElementById("lbl-entry").innerText = entry.toFixed(5);
                 document.getElementById("lbl-tp1").innerText = tp1.toFixed(5); document.getElementById("lbl-tp2").innerText = tp2.toFixed(5);
                 document.getElementById("box-entry").innerText = entry.toFixed(5); document.getElementById("box-sl").innerText = sl.toFixed(5);
@@ -270,9 +276,6 @@
                 }
             };
             drawTargetLine(sl, "#ff3b30", "SL"); drawTargetLine(entry, "#2563eb", "Вход"); drawTargetLine(tp1, "#00b159", "TP1"); drawTargetLine(tp2, "#00b159", "TP2");
-
-            let ema9 = new Array(), ema21 = new Array(), k9 = 2/10, k21 = 2/22, p9 = priceHistory, p21 = priceHistory;
-            priceHistory.forEach(function(p) { p9 = p * k9 + p9 * (1 - k9); p21 = p * k21 + p21 * (1 - k21); ema9.push(p9); ema21.push(p21); });
             ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory));
             for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i])); ctx.stroke();
         }
@@ -284,10 +287,10 @@
             let max = Math.max.apply(Math, priceHistory) * 1.005, min = Math.min.apply(Math, priceHistory) * 0.995, range = max - min;
             let getX = function(i) { return (canvas.width / (priceHistory.length - 1)) * i; }, getY = function(v) { return canvas.height - ((v - min) / range) * canvas.height; };
 
-            ctx.strokeStyle = "#00b159"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory));
-            for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i] * 0.998)); ctx.stroke();
-            ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory));
-            for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i] * 1.002)); ctx.stroke();
+            ctx.strokeStyle = "#00b159"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory * 0.997));
+            for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i] * 0.997)); ctx.stroke();
+            ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory * 1.003));
+            for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i] * 1.003)); ctx.stroke();
         }
 
         function changeTF(tf) { activeTF = tf; updateDetailBlock(); }
@@ -305,7 +308,7 @@
                     }
                 }
                 if (Math.random() > 0.9985 && !coin.isNew) { 
-                    if (Math.random() * 100 < coin.accuracy) { wins++; showToast('💰 Закрыто по Тейку: ' + coin.name, true); } 
+                    if (Math.random() * 100 < coin.accuracy) { wins++; showToast('💰 Зафиксирован Тейк-Профит: ' + coin.name, true); } 
                     else { losses++; showToast('🛑 Сработал Стоп-Лосс: ' + coin.name, false); }
                     localStorage.setItem('trader_wins', wins); localStorage.setItem('trader_losses', losses); updateStatsUI();
                 }
@@ -325,7 +328,7 @@
                         coin.accuracy = 70 + Math.random() * 25; coin.spread = 1 + Math.random() * 16;
                         coin.leverage = Math.floor(Math.random() * 4) * 5 + 10;
                         try { audioAlert.play(); } catch(e){}
-                        showToast('🚨 СВЕЖИЙ СИГНАЛ: ' + coin.name + ' в зоне 40с!', true);
+                        showToast('🚨 СВЕЖИЙ ТРЕНД: ' + coin.name + ' в зоне 40с!', true);
                     }
                 }
             });
@@ -341,7 +344,6 @@
             if(localStorage.getItem('trader_dep')) document.getElementById('input-deposit').value = localStorage.getItem('trader_dep');
             if(localStorage.getItem('trader_risk')) document.getElementById('input-risk').value = localStorage.getItem('trader_risk');
         }
-
         function toggleBot() { isRunning = !isRunning; document.getElementById('main-btn').innerText = isRunning ? "⏹ Стоп" : "▶ Старт"; }
         loadSettings(); updateStatsUI(); renderGrid(); updateDetailBlock();
     </script>
