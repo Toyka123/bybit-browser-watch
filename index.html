@@ -25,7 +25,7 @@
         .stat-title { font-size: 11px; text-transform: uppercase; color: #848e9c; margin-bottom: 8px; font-weight: 700; }
         .stat-value { font-size: 24px; font-weight: 700; font-family: monospace; }
         
-        /* Исправление гигантских квадратов: адаптивные колонки */
+        /* Компактные колонки под широкие экраны */
         .coins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
         
         .coin-card { background: #12161c; border: 1px solid #1f2630; border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; border: 1px solid #1f2630; transition: background-color 0.4s, border-color 0.2s; overflow: hidden; }
@@ -157,7 +157,6 @@
             if (mode === 'signals') {
                 document.getElementById('btn-sig-mode').classList.add('active');
                 document.getElementById('label-total-signals').innerText = "58";
-                document.getElementById('label-total-signals').style.color = "#00b159";
                 document.getElementById('det-price-lbl').innerText = "Текущая цена";
                 document.getElementById('slider-wrapper-zone').style.setProperty('display', 'block', 'important');
                 document.getElementById('target-boxes-zone').style.setProperty('display', 'grid', 'important');
@@ -165,7 +164,6 @@
             } else {
                 document.getElementById('btn-arb-mode').classList.add('active');
                 document.getElementById('label-total-signals').innerText = "24 Связки";
-                document.getElementById('label-total-signals').style.color = "#f59e0b";
                 document.getElementById('det-price-lbl').innerText = "Разрыв цен (Спред)";
                 document.getElementById('slider-wrapper-zone').style.setProperty('display', 'none', 'important');
                 document.getElementById('target-boxes-zone').style.setProperty('display', 'none', 'important');
@@ -243,7 +241,7 @@
                 let hh = exitTime.getHours(); let mm = exitTime.getMinutes();
                 if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
                 let durationText = coin.isNew ? "ВХОД ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.totalMinutes) + ")";
-                document.getElementById("det-info-rows").innerHTML = "• Живой Трекинг Целей Bybit<br>• Marsa: " + marginUsdt + " USDT (Volume: " + totalVolumeUsdt + " $)<br>• Выбранное ботом плечо: " + coin.leverage + "x<br>⏱ " + durationText;
+                document.getElementById("det-info-rows").innerHTML = "• Живой Трекинг Целей Bybit<br>• Маржа ордера: " + marginUsdt + " USDT (Объём: " + totalVolumeUsdt + " $)<br>• Выбранное ботом плечо: " + coin.leverage + "x<br>⏱ " + durationText;
                 document.getElementById("lbl-sl").innerText = sl.toFixed(5); document.getElementById("lbl-entry").innerText = entry.toFixed(5);
                 document.getElementById("lbl-tp1").innerText = tp1.toFixed(5); document.getElementById("lbl-tp2").innerText = tp2.toFixed(5);
                 document.getElementById("box-entry").innerText = entry.toFixed(5); document.getElementById("box-sl").innerText = sl.toFixed(5);
@@ -252,11 +250,21 @@
             } else {
                 document.getElementById('slider-wrapper-zone').style.setProperty('display', 'none', 'important');
                 document.getElementById('target-boxes-zone').style.setProperty('display', 'none', 'important');
-                document.getElementById("det-name").innerHTML = '🔄 СВЯЗКА: ' + coin.name + ' &nbsp; Спред: +' + coin.spread.toFixed(1) + '%';
+                let coinTicker = coin.name.split('-')[0];
+                document.getElementById("det-name").innerHTML = '🔄 АРБИТРАЖНАЯ СВЯЗКА: ' + coinTicker + '/USDT';
                 document.getElementById("det-price").innerText = "+" + coin.spread.toFixed(2) + "%";
                 let halfMargin = (marginUsdt / 2).toFixed(2);
-                let durationText = coin.isNew ? "ВХОД ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Жизнь спреда связки: " + formatMinutesToTime(coin.arbMinutes);
-                document.getElementById("det-info-rows").innerHTML = "• ХЕДЖ-АРБИТРАЖ (БЕЗ ПЕРЕВОДА МОНЕТ)<br>• Шаг 1: КУПИТЬ на " + coin.b1 + " (СПОТ) на сумму " + halfMargin + " USDT<br>• Шаг 2: ОТКРЫТЬ SHORT на " + coin.b2 + " (ФЬЮЧЕРС) на сумму " + halfMargin + " USDT (Плечо: " + coin.leverage + "x)<br>⏱ " + durationText;
+                let totalTokens = ((halfMargin * coin.leverage) / coin.price).toFixed(1);
+                let exitTime = new Date(Date.now() + coin.arbMinutes * 60000);
+                let hh = exitTime.getHours(); let mm = exitTime.getMinutes();
+                if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
+                let durationText = coin.isNew ? "ОКНО ЗАКРОЕТСЯ ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Спред активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.arbMinutes) + ")";
+                
+                let b1Block = "<div style='background:rgba(0,177,89,0.08); border-left:4px solid #00b159; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#00b159; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 1 · КУПИТЬ СПОТ</span><div style='font-size:13px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='background:#1f2630; padding:2px 6px; border-radius:4px; color:#f59e0b; font-family:monospace;'>" + coin.b1 + "</span></div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#00b159;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>≈ " + totalTokens + " " + coinTicker + "</div></div></div>";
+                let b2Block = "<div style='background:rgba(255,59,48,0.08); border-left:4px solid #ff3b30; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#ff3b30; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 2 · ОТКРЫТЬ SHORT</span><div style='font-size:13px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='background:#1f2630; padding:2px 6px; border-radius:4px; color:#f59e0b; font-family:monospace;'>" + coin.b2 + "</span></div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#ff3b30;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>Плечо: " + coin.leverage + "x</div></div></div>";
+                let timerBlock = "<div class='badge-timer-inline' style='background:#1f2630; color:#f59e0b; border:1px solid #2d3848; padding:8px 12px; font-size:12px; text-align:center; font-family:monospace; margin-top:4px; border-radius:6px; width:94%; text-transform:uppercase;'>" + durationText + "</div>";
+                
+                document.getElementById("det-info-rows").innerHTML = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:5px; width:100%;'>" + b1Block + b2Block + timerBlock + "</div>";
                 drawChartArbitrage();
             }
         }
