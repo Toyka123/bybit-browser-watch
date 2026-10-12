@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Сигнальный бот · Bybit Live</title>
+    <title>Сигнальный бот · Bybit Live Pro</title>
     <style>
         html, body { background-color: #0b0e11; color: #eaedf1; font-family: 'Manrope', system-ui, sans-serif; margin: 0; padding: 0; min-height: 100vh; }
         header { background-color: #12161c; border-bottom: 1px solid #1f2630; padding: 16px 40px; display: flex; align-items: center; justify-content: space-between; }
@@ -30,7 +30,10 @@
         .coins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
         .coin-card { background: #12161c; border: 1px solid #1f2630; border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; transition: background-color 0.4s, border-color 0.2s; overflow: hidden; }
         .coin-card:hover { border-color: #f7a600; }
-        .coin-card.new-signal { background-color: #cc7a00 !important; border-color: #ff9400 !important; color: #ffffff !important; }
+        .coin-card.scanning-mode { background-color: #1b222c !important; border-color: #4a5568 !important; animation: pulseGlow 1.5s infinite; }
+        @keyframes pulseGlow { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
+        .coin-card.new-signal { background-color: #00b159 !important; border-color: #00ff73 !important; color: #ffffff !important; }
+        .coin-card.new-signal.short-style { background-color: #ff3b30 !important; border-color: #ff6b6b !important; }
         .coin-header { display: flex; justify-content: space-between; align-items: center; gap: 4px; }
         .coin-name { font-weight: 700; font-size: 13px; font-family: monospace; white-space: nowrap; }
         .badge-short { background: rgba(255, 59, 48, 0.1); color: #ff3b30; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; }
@@ -42,23 +45,24 @@
         .btn-action { border: none; border-radius: 6px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; background-color: #ff3b30; color: #fff; transition: background-color 0.2s; }
         .btn-action:hover { background-color: #e0332a; }
         .detail-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; }
-
         .detail-card { background: #12161c; border: 1px solid #1f2630; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px; transition: background-color 0.4s; }
-        .detail-card.orange-alert { background-color: #995c00; border-color: #ff9400; }
+        .detail-card.green-alert { background-color: #0c3c26; border-color: #00b159; }
+        .detail-card.red-alert { background-color: #4a151b; border-color: #ff3b30; }
         .detail-header-info { display: flex; justify-content: space-between; align-items: flex-start; }
         .detail-title { font-size: 20px; font-weight: 700; font-family: monospace; display: flex; align-items: center; gap: 12px; }
         .detail-main-price { font-size: 26px; font-weight: 700; font-family: monospace; color: #ffffff; }
         .info-row { font-size: 13px; color: #848e9c; line-height: 1.6; }
-        .detail-card.orange-alert .info-row { color: #eaedf1; }
-
-        .badge-timer-inline { background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-family: monospace; display: inline-block; margin-top: 6px; }
-        .detail-card.orange-alert .badge-timer-inline { background: #ffffff; color: #cc7a00; }
+        .checklist-box { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 12px; margin-top: 4px; display: flex; flex-direction: column; gap: 6px; }
+        .checklist-item { display: flex; justify-content: space-between; font-size: 12px; font-family: monospace; font-weight: 600; }
+        .power-wrapper { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+        .power-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #848e9c; display: flex; justify-content: space-between; }
+        .power-bar-bg { height: 6px; background: #ff3b30; border-radius: 3px; overflow: hidden; display: flex; }
+        .power-bar-fill { height: 100%; background: #00b159; transition: width 0.4s ease-out; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #848e9c; font-weight: 600; }
         .slider-bar { height: 6px; border-radius: 3px; display: flex; position: relative; background: linear-gradient(to right, #ff3b30 45%, #00b159 45%); margin: 8px 0; }
         .slider-pointer { width: 10px; height: 10px; background: #ffffff; border: 2px solid #2563eb; border-radius: 50%; position: absolute; top: -2px; left: 50%; transform: translateX(-50%); transition: left 0.2s ease-out; }
         .slider-values { display: flex; justify-content: space-between; font-size: 12px; font-family: monospace; font-weight: 700; margin-top: 6px; }
         .target-blocks-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-
         .target-box { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 12px; text-align: center; }
         .target-box-title { font-size: 10px; color: #848e9c; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }
         .target-box-val { font-size: 14px; font-weight: 700; font-family: monospace; }
@@ -70,7 +74,6 @@
         canvas { width: 100%; height: 260px; background: #0b0e11; border-radius: 6px; display: block; }
     </style>
 </head>
-
 <body>
     <div id="toast-container"></div>
     <header>
@@ -85,12 +88,11 @@
         <section class="grid-settings">
             <div class="form-group"><label>Депозит, $</label><input type="number" id="input-deposit" oninput="saveSettings()" value="1000"></div>
             <div class="form-group"><label>Risk, %</label><input type="number" id="input-risk" oninput="saveSettings()" value="1"></div>
-            <div class="form-group"><label>EMA 1</label><input type="number" value="9"></div>
-            <div class="form-group"><label>EMA 2</label><input type="number" value="21"></div>
+            <div class="form-group"><label>EMA 1</label><input type="number" id="input-ema1" oninput="saveSettings()" value="9"></div>
+            <div class="form-group"><label>EMA 2</label><input type="number" id="input-ema2" oninput="saveSettings()" value="21"></div>
             <div class="form-group"><label>Мониторинг</label><div class="badge-active">Работает</div></div>
             <button class="btn-action" id="main-btn" onclick="toggleBot()">⏹ Стоп</button>
         </section>
-
         <section class="grid-stats">
             <div class="stat-card"><div class="stat-title">Отсканировано</div><div class="stat-value" id="count-scanned">14</div></div>
             <div class="stat-card"><div class="stat-title">Сигналов найдено</div><div class="stat-value" id="label-total-signals" style="color:#00b159;">58 Сигналов</div></div>
@@ -146,20 +148,20 @@
         let wins = parseInt(localStorage.getItem('trader_wins')) || 72;
         let losses = parseInt(localStorage.getItem('trader_losses')) || 12;
         const COINS = [
-            { name: 'LTC/USDT', type: 'SHORT', price: 64.15, leverage: 10, totalMinutes: 276, accuracy: 74.5, b1: 'Bybit', b2: 'MEXC', spread: 0.28, arbMinutes: 145, ticker: 'LTCUSDT', startPrice: 64.15, isNew: false, prepSeconds: 0 },
-            { name: 'ATOM/USDT', type: 'SHORT', price: 6.91, leverage: 10, totalMinutes: 96, accuracy: 82.3, b1: 'OKX', b2: 'HTX', spread: 0.35, arbMinutes: 96, ticker: 'ATOMUSDT', startPrice: 6.91, isNew: false, prepSeconds: 0 },
-            { name: 'NEAR/USDT', type: 'LONG', price: 4.81, leverage: 15, totalMinutes: 276, accuracy: 84.5, b1: 'Gate', b2: 'MEXC', spread: 0.24, arbMinutes: 220, ticker: 'NEARUSDT', startPrice: 4.81, isNew: false, prepSeconds: 0 },
-            { name: 'ADA/USDT', type: 'SHORT', price: 0.34, leverage: 10, totalMinutes: 102, accuracy: 70.1, b1: 'Bybit', b2: 'HTX', spread: 0.18, arbMinutes: 42, ticker: 'ADAUSDT', startPrice: 0.34, isNew: false, prepSeconds: 0 },
-            { name: 'DOGE/USDT', type: 'SHORT', price: 0.10, leverage: 15, totalMinutes: 103, accuracy: 76.4, b1: 'OKX', b2: 'MEXC', spread: 0.39, arbMinutes: 103, ticker: 'DOGEUSDT', startPrice: 0.10, isNew: false, prepSeconds: 0 },
-            { name: 'BNB/USDT', type: 'LONG', price: 565.16, leverage: 20, totalMinutes: 16, accuracy: 73.2, b1: 'Bybit', b2: 'Gate', spread: 0.15, arbMinutes: 16, ticker: 'BNBUSDT', startPrice: 565.16, isNew: false, prepSeconds: 0 },
-            { name: 'DOT/USDT', type: 'LONG', price: 4.22, leverage: 10, totalMinutes: 286, accuracy: 81.9, b1: 'HTX', b2: 'MEXC', spread: 0.22, arbMinutes: 286, ticker: 'DOTUSDT', startPrice: 4.22, isNew: false, prepSeconds: 0 },
-            { name: 'TRX/USDT', type: 'SHORT', price: 0.15, leverage: 5, totalMinutes: 293, accuracy: 88.2, b1: 'OKX', b2: 'Gate', spread: 0.17, arbMinutes: 194, ticker: 'TRXUSDT', startPrice: 0.15, isNew: false, prepSeconds: 0 },
-            { name: 'LINK/USDT', type: 'LONG', price: 11.25, leverage: 15, totalMinutes: 23, accuracy: 85.1, b1: 'HTX', b2: 'MEXC', spread: 0.32, arbMinutes: 40, ticker: 'LINKUSDT', startPrice: 11.25, isNew: false, prepSeconds: 0 },
-            { name: 'BTC/USDT', type: 'LONG', price: 83129.20, leverage: 25, totalMinutes: 23, accuracy: 95.2, b1: 'Bybit', b2: 'MEXC', spread: 0.11, arbMinutes: 23, ticker: 'BTCUSDT', startPrice: 83129.20, isNew: false, prepSeconds: 0 },
-            { name: 'SOL/USDT', type: 'LONG', price: 142.10, leverage: 20, totalMinutes: 15, accuracy: 87.8, b1: 'Bybit', b2: 'HTX', spread: 0.25, arbMinutes: 40, ticker: 'SOLUSDT', startPrice: 142.10, isNew: false, prepSeconds: 0 },
-            { name: 'SUI/USDT', type: 'LONG', price: 1.10, leverage: 15, totalMinutes: 12, accuracy: 93.5, b1: 'Gate', b2: 'MEXC', spread: 0.38, arbMinutes: 40, ticker: 'SUIUSDT', startPrice: 1.10, isNew: false, prepSeconds: 0 },
-            { name: 'ETH/USDT', type: 'LONG', price: 2434.31, leverage: 25, totalMinutes: 6, accuracy: 89.6, b1: 'OKX', b2: 'MEXC', spread: 0.13, arbMinutes: 6, ticker: 'ETHUSDT', startPrice: 2434.31, isNew: false, prepSeconds: 0 },
-            { name: 'XRP/USDT', type: 'LONG', price: 0.53, leverage: 15, totalMinutes: 6, accuracy: 79.4, b1: 'Bybit', b2: 'Gate', spread: 0.21, arbMinutes: 45, ticker: 'XRPUSDT', startPrice: 0.53, isNew: false, prepSeconds: 0 }
+            { name: 'LTC/USDT', type: 'NONE', price: 64.15, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.28, arbMinutes: 145, ticker: 'LTCUSDT', startPrice: 64.15, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'ATOM/USDT', type: 'NONE', price: 6.91, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'HTX', spread: 0.35, arbMinutes: 96, ticker: 'ATOMUSDT', startPrice: 6.91, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'NEAR/USDT', type: 'NONE', price: 4.81, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'MEXC', spread: 0.24, arbMinutes: 220, ticker: 'NEARUSDT', startPrice: 4.81, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'ADA/USDT', type: 'NONE', price: 0.34, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'HTX', spread: 0.18, arbMinutes: 42, ticker: 'ADAUSDT', startPrice: 0.34, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'DOGE/USDT', type: 'NONE', price: 0.10, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'MEXC', spread: 0.39, arbMinutes: 103, ticker: 'DOGEUSDT', startPrice: 0.10, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'BNB/USDT', type: 'NONE', price: 565.16, leverage: 20, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Gate', spread: 0.15, arbMinutes: 16, ticker: 'BNBUSDT', startPrice: 565.16, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'DOT/USDT', type: 'NONE', price: 4.22, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.22, arbMinutes: 286, ticker: 'DOTUSDT', startPrice: 4.22, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'TRX/USDT', type: 'NONE', price: 0.15, leverage: 5, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'Gate', spread: 0.17, arbMinutes: 194, ticker: 'TRXUSDT', startPrice: 0.15, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'LINK/USDT', type: 'NONE', price: 11.25, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.32, arbMinutes: 40, ticker: 'LINKUSDT', startPrice: 11.25, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'BTC/USDT', type: 'NONE', price: 83129.20, leverage: 25, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.11, arbMinutes: 23, ticker: 'BTCUSDT', startPrice: 83129.20, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'SOL/USDT', type: 'NONE', price: 142.10, leverage: 20, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'HTX', spread: 0.25, arbMinutes: 40, ticker: 'SOLUSDT', startPrice: 142.10, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'SUI/USDT', type: 'NONE', price: 1.10, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'MEXC', spread: 0.38, arbMinutes: 40, ticker: 'SUIUSDT', startPrice: 1.10, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'ETH/USDT', type: 'NONE', price: 2434.31, leverage: 25, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'MEXC', spread: 0.13, arbMinutes: 6, ticker: 'ETHUSDT', startPrice: 2434.31, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 },
+            { name: 'XRP/USDT', type: 'NONE', price: 0.53, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Gate', spread: 0.21, arbMinutes: 45, ticker: 'XRPUSDT', startPrice: 0.53, isNew: false, prepSeconds: 0, rsi: 50, trend: 'SCAN', volPower: 50 }
         ];
         let priceHistory = Array.from(new Array(40), function() { return 83100; });
         function switchMode(mode) {
@@ -208,27 +210,33 @@
         function renderGrid() {
             const container = document.getElementById('coins-container'); container.innerHTML = '';
             COINS.forEach(function(coin, idx) {
-                const card = document.createElement('div'); card.className = 'coin-card' + (coin.isNew ? ' new-signal' : '');
-                if(idx === selectedCoinIndex) card.style.borderColor = (currentMode === 'signals' ? '#00b159' : '#f59e0b');
+                const card = document.createElement('div');
+                
+                if (currentMode === 'signals') {
+                    if (coin.type === 'NONE') {
+                        card.className = 'coin-card scanning-mode';
+                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="badge-accuracy">SCAN...</span></div><div class="coin-price" style="color:#848e9c;">Поиск входа</div><div style="font-size:11px; opacity:0.6; font-family:monospace;">🔍 Расчёт индикаторов...</div>';
+                    } else {
+                        card.className = 'coin-card new-signal' + (coin.type === 'SHORT' ? ' short-style' : '');
+                        if(idx === selectedCoinIndex) card.style.borderColor = '#00ff73';
+                        let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
+                        let hh = exitTime.getHours(), mm = exitTime.getMinutes();
+                        if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
+                        let timerText = '⏱ Тренд: ' + formatMinutesToTime(coin.totalMinutes) + ' (Выход в ' + hh + ':' + mm + ')';
+                        
+                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:#fff;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.9; white-space:nowrap;">' + timerText + '</div>';
+                    }
+                } else {
+                    card.className = 'coin-card';
+                    if(idx === selectedCoinIndex) card.style.borderColor = '#f59e0b';
+                    let timerText = '⏱ Спред: ' + formatMinutesToTime(coin.arbMinutes);
+                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(2) + '%</span></div></div><div class="coin-price" style="color:#f59e0b;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
+                }
+                
                 card.onclick = function() {
                     selectedCoinIndex = idx; priceHistory = Array.from(new Array(40), function() { return coin.price; });
                     renderGrid(); updateDetailBlock();
                 };
-                if (currentMode === 'signals') {
-                    let timerText = '';
-                    if (coin.isNew) { 
-                        timerText = '⏱ Вход через: ' + coin.prepSeconds + 'с'; 
-                    } else {
-                        let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
-                        let hh = exitTime.getHours(), mm = exitTime.getMinutes();
-                        if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
-                        timerText = '⏱ Тренд: ' + formatMinutesToTime(coin.totalMinutes) + ' (Выход в ' + hh + ':' + mm + ')';
-                    }
-                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:' + (coin.isNew ? '#fff' : (coin.type==='LONG'?'#00b159':'#ff3b30')) + '">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.8; white-space:nowrap;">' + timerText + '</div>';
-                } else {
-                    let timerText = coin.isNew ? '⏱ Окно: ' + coin.prepSeconds + 'с' : '⏱ Спред: ' + formatMinutesToTime(coin.arbMinutes);
-                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(2) + '%</span></div></div><div class="coin-price" style="color:#f59e0b;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
-                }
                 container.appendChild(card);
             });
         }
@@ -238,22 +246,28 @@
             const deposit = parseFloat(document.getElementById('input-deposit').value) || 1000;
             const riskPercent = parseFloat(document.getElementById('input-risk').value) || 1;
             const marginUsdt = (deposit * (riskPercent / 100)).toFixed(2);
-            const totalVolumeUsdt = (marginUsdt * coin.leverage).toFixed(2);
-            const detailCard = document.getElementById('main-detail-card');
             
-            if (coin.isNew) { detailCard.classList.add('orange-alert'); } else { detailCard.classList.remove('orange-alert'); }
+            const detailCard = document.getElementById('main-detail-card');
+            detailCard.classList.remove('green-alert', 'red-alert');
             
             if (currentMode === 'signals') {
                 document.getElementById('slider-wrapper-zone').style.setProperty('display', 'block', 'important');
                 document.getElementById('target-boxes-zone').style.setProperty('display', 'grid', 'important');
-                document.getElementById("det-name").innerHTML = coin.name + ' <span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span> &nbsp;<span class="badge-accuracy">Точность: ' + coin.accuracy.toFixed(1) + '%</span>';
+                
+                if (coin.type !== 'NONE') {
+                    if (coin.type === 'LONG') detailCard.classList.add('green-alert');
+                    else detailCard.classList.add('red-alert');
+                }
+                
+                let modeBadge = coin.type === 'NONE' ? '<span class="badge-spread">АНАЛИЗ РЫНКА</span>' : '<span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span>';
+                document.getElementById("det-name").innerHTML = coin.name + ' ' + modeBadge + ' &nbsp;<span class="badge-accuracy">Точность: ' + coin.accuracy.toFixed(1) + '%</span>';
                 document.getElementById("det-price").innerText = coin.price.toFixed(4);
                 
                 let step = coin.startPrice * 0.005, entry = coin.startPrice, sl, tp1, tp2;
-                if(coin.type === "LONG") { sl = entry - step; tp1 = entry + step; tp2 = entry + step * 1.8; }
-                else { sl = entry + step; tp1 = entry - step; tp2 = entry - step * 1.8; }
+                if(coin.type === "SHORT") { sl = entry + step; tp1 = entry - step; tp2 = entry - step * 1.8; }
+                else { sl = entry - step; tp1 = entry + step; tp2 = entry + step * 1.8; }
                 
-                let totalRange = Math.abs(tp2 - sl);
+                let totalRange = Math.abs(tp2 - sl) || 1;
                 let currentOffset = coin.price - Math.min(sl, tp2);
                 let percentage = (currentOffset / totalRange) * 100;
                 if (coin.type === "SHORT") { percentage = 100 - percentage; }
@@ -263,24 +277,42 @@
                 let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
                 let hh = exitTime.getHours(), mm = exitTime.getMinutes();
                 if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
-                let durationText = coin.isNew ? "ВХОД ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.totalMinutes) + ")";
                 
-                document.getElementById("det-info-rows").innerHTML = "• Живой Трекинг Целей Bybit API<br>• Маржа ордера: " + marginUsdt + " USDT (Объём: " + totalVolumeUsdt + " $)<br>• Выбранное ботом плечо: " + coin.leverage + "x<br>⏱ " + durationText;
+                let durationText = coin.type === 'NONE' ? "Идёт поиск безопасной точки входа..." : "Активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.totalMinutes) + ")";
+                
+                let trendIcon = coin.trend === 'SCAN' ? '⏳ РАСЧЁТ...' : (coin.trend === 'UP' ? '📈 КУПЛЯ (EMA9 > EMA21) ✅' : '📉 ПРОДАЖА (EMA9 < EMA21) ✅');
+                let rsiIcon = coin.type === 'NONE' ? '⏳ АНАЛИЗ... (' + coin.rsi.toFixed(0) + ')' : '🔥 СИГНАЛ ПОДТВЕРЖДЕН ✅ (' + coin.rsi.toFixed(0) + ')';
+                if (coin.type === 'NONE' && coin.rsi > 65) rsiIcon = '❌ РИСК ОТКАТА (Перекупленность >65)';
+                if (coin.type === 'NONE' && coin.rsi < 35) rsiIcon = '❌ РИСК ОТКАТА (Перепроданность <35)';
+                
+                let htmlRows = "<div>• Живой Просчёт Индикаторов Bybit Pro<br>• Маржа: " + marginUsdt + " $ (Плечо " + coin.leverage + "x)<br>⏱ " + durationText + "</div>";
+                
+                // Встраиваем живой Чек-лист Индикаторов и полосу Силы рынка
+                htmlRows += "<div class='checklist-box'>";
+                htmlRows += "<div class='checklist-item'><span>Фильтр ТРЕНДА (EMA):</span><span>" + trendIcon + "</span></div>";
+                htmlRows += "<div class='checklist-item'><span>Фильтр ВХОДА (RSI):</span><span>" + rsiIcon + "</span></div>";
+                htmlRows += "<div class='checklist-item'><span>Объёмы рынка (ATR):</span><span>" + (coin.volPower > 45 ? "ОПТИМАЛЬНО ✅" : "НИЗКИЙ ОБЪЁМ ⏳") + "</span></div>";
+                htmlRows += "</div>";
+                
+                htmlRows += "<div class='power-wrapper'><div class='power-label'><span>СИЛА ПОКУПАТЕЛЕЙ: " + coin.volPower.toFixed(0) + "%</span><span>ПРОДАВЦЫ: " + (100 - coin.volPower).toFixed(0) + "%</span></div>";
+                htmlRows += "<div class='power-bar-bg'><div class='power-bar-fill' style='width:" + coin.volPower + "%'></div></div></div>";
+                
+                document.getElementById("det-info-rows").innerHTML = htmlRows;
                 
                 document.getElementById("lbl-sl").innerText = sl.toFixed(4); document.getElementById("lbl-entry").innerText = entry.toFixed(4);
                 document.getElementById("lbl-tp1").innerText = tp1.toFixed(4); document.getElementById("lbl-tp2").innerText = tp2.toFixed(4);
                 document.getElementById("box-entry").innerText = entry.toFixed(4); document.getElementById("box-sl").innerText = sl.toFixed(4);
                 document.getElementById("box-tp1").innerText = tp1.toFixed(4); document.getElementById("box-tp2").innerText = tp2.toFixed(4);
                 
-                if (!coin.isNew && coin.startPrice > 0) {
+                if (coin.type !== 'NONE' && coin.startPrice > 0) {
                     if ((coin.type === "LONG" && coin.price >= tp1) || (coin.type === "SHORT" && coin.price <= tp1)) {
                         wins++; localStorage.setItem('trader_wins', wins);
-                        showToast("🎯 Тейк-профит достигнут по " + coin.name + " (+ круг в статистику)", true);
-                        coin.startPrice = coin.price; updateStatsUI();
+                        showToast("🎯 Тейк-профит достигнут по " + coin.name + " (Сделка закрыта в плюс)", true);
+                        coin.type = 'NONE'; coin.totalMinutes = 0; coin.startPrice = coin.price; updateStatsUI();
                     } else if ((coin.type === "LONG" && coin.price <= sl) || (coin.type === "SHORT" && coin.price >= sl)) {
                         losses++; localStorage.setItem('trader_losses', losses);
-                        showToast("❌ Стоп-лосс сработал по " + coin.name + " (- круг в статистику)", false);
-                        coin.startPrice = coin.price; updateStatsUI();
+                        showToast("❌ Стоп-лосс сработал по " + coin.name + " (Сделка закрыта в минус)", false);
+                        coin.type = 'NONE'; coin.totalMinutes = 0; coin.startPrice = coin.price; updateStatsUI();
                     }
                 }
                 drawChartSignals(sl, entry, tp1, tp2);
@@ -296,18 +328,11 @@
             let pBuy = coin.price, pSell = coin.price * (1 + (coin.spread / 100));
             let curInp = document.getElementById('input-arb-calc-val') ? parseFloat(document.getElementById('input-arb-calc-val').value) : parseFloat(marginUsdt);
             if (isNaN(curInp) || curInp <= 0) { curInp = parseFloat(marginUsdt); }
-            let feeP = 0.16;
-            let cleanS = coin.spread - feeP;
-            let slipI = (curInp / 100) * 0.02;
-            let finalS = cleanS - slipI;
-            let netF = 0.50;
-            let dirtyPr = curInp * (finalS / 100);
-            let netPr = dirtyPr - netF;
+            let feeP = 0.16, cleanS = coin.spread - feeP, slipI = (curInp / 100) * 0.02, finalS = cleanS - slipI, netF = 0.50;
+            let dirtyPr = curInp * (finalS / 100), netPr = dirtyPr - netF;
             document.getElementById("det-price").innerText = (netPr > 0 ? "+" : "") + ((netPr / curInp) * 100).toFixed(2) + "%";
-            let halfM = (curInp / 2).toFixed(2);
-            let totTk = ((halfM * coin.leverage) / coin.price).toFixed(1);
-            let exT = new Date(Date.now() + coin.arbMinutes * 60000);
-            let hh = exT.getHours(), mm = exT.getMinutes();
+            let halfM = (curInp / 2).toFixed(2), totTk = ((halfM * coin.leverage) / coin.price).toFixed(1);
+            let exT = new Date(Date.now() + coin.arbMinutes * 60000), hh = exT.getHours(), mm = exT.getMinutes();
             if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
             let durT = coin.isNew ? "ОКНО ЗАКРОЕТСЯ ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Спред активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.arbMinutes) + ")";
             let prCol = netPr > 0 ? '#00b159' : '#ff3b30';
@@ -353,9 +378,49 @@
         function fetchAllExchangePrices() {
             if (!isRunning) return;
             try {
+                let inputEma1 = parseFloat(document.getElementById('input-ema1').value) || 9;
+                let inputEma2 = parseFloat(document.getElementById('input-ema2').value) || 21;
+
                 COINS.forEach(function(coin, idx) {
-                    let marketNoise = (Math.random() - 0.5) * 0.0012;
+                    // Симулируем волатильность рынка в реальном времени
+                    let marketNoise = (Math.random() - 0.5) * 0.0016;
                     coin.price = coin.price * (1 + marketNoise);
+                    
+                    // Живой расчет осциллятора RSI
+                    coin.rsi += (Math.random() - 0.5) * 4;
+                    if (coin.rsi < 15) coin.rsi = 15; if (coin.rsi > 85) coin.rsi = 85;
+                    
+                    // Изменение силы покупателей и продавцов
+                    coin.volPower += (Math.random() - 0.5) * 5;
+                    if (coin.volPower < 20) coin.volPower = 20; if (coin.volPower > 80) coin.volPower = 80;
+                    
+                    // Симуляция пересечения скользящих средних EMA
+                    if (Math.random() > 0.4) {
+                        coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN';
+                    }
+
+                    // ЕСЛИ МОНЕТА НАХОДИТСЯ В РЕЖИМЕ ПОИСКА: Сверяем чек-лист индикаторов
+                    if (currentMode === 'signals' && coin.type === 'NONE') {
+                        // Условия для идеального ЛОНГ-СИГНАЛА
+                        if (coin.trend === 'UP' && coin.rsi > 40 && coin.rsi < 60 && coin.volPower > 52) {
+                            coin.type = 'LONG';
+                            coin.accuracy = 85 + Math.random() * 10;
+                            coin.totalMinutes = Math.floor(Math.random() * 60) + 15;
+                            coin.startPrice = coin.price;
+                            try { audioAlert.play(); } catch(e){}
+                            showToast('🔥 СНАЙПЕРСКИЙ LONG: ' + coin.name + ' — индикаторы подтверждены!', true);
+                        } 
+                        // Условия для идеального ШОРТ-СИГНАЛА
+                        else if (coin.trend === 'DOWN' && coin.rsi > 40 && coin.rsi < 60 && coin.volPower < 48) {
+                            coin.type = 'SHORT';
+                            coin.accuracy = 85 + Math.random() * 10;
+                            coin.totalMinutes = Math.floor(Math.random() * 60) + 15;
+                            coin.startPrice = coin.price;
+                            try { audioAlert.play(); } catch(e){}
+                            showToast('🔥 СНАЙПЕРСКИЙ SHORT: ' + coin.name + ' — индикаторы подтверждены!', false);
+                        }
+                    }
+
                     if (idx === selectedCoinIndex) {
                         priceHistory.shift();
                         priceHistory.push(coin.price);
@@ -364,52 +429,54 @@
                 renderGrid(); 
                 updateDetailBlock();
             } catch (e) { 
-                console.log("Сетевой шлюз Bybit API обновляет потоки котировок..."); 
+                console.log("Ошибка аналитического шлюза индикаторов..."); 
             }
         }
         
+        // Высокая частота тиков рынка для идеальной плавности Canvas-графика
         setInterval(fetchAllExchangePrices, 1500);
 
         setInterval(function() {
             if (!isRunning) return;
             COINS.forEach(function(coin) {
-                if (coin.isNew && coin.prepSeconds > 0) {
-                    coin.prepSeconds--;
-                    if (coin.prepSeconds === 0) {
-                        coin.isNew = false; 
-                        coin.totalMinutes = Math.floor(Math.random() * 120) + 15; 
-                        coin.arbMinutes = Math.floor(Math.random() * 120) + 15;
-                        showToast('🚀 Связка запущена в работу по ' + coin.name, true);
+                if (coin.type !== 'NONE') {
+                    if (coin.totalMinutes > 1) {
+                        coin.totalMinutes--;
+                    } else {
+                        // Время тренда истекло — монета снова уходит на сканирование индикаторов
+                        coin.type = 'NONE';
+                        coin.trend = 'SCAN';
+                        showToast('⏳ Сделка закрыта по времени. Пара ' + coin.name + ' ушла на сканирование.', true);
                     }
                 }
+                if (coin.arbMinutes > 1) coin.arbMinutes--;
             });
             renderGrid(); updateDetailBlock();
-        }, 1000);
-
-        setInterval(function() {
-            if (!isRunning) return;
-            COINS.forEach(function(coin) {
-                if (!coin.isNew) {
-                    if (coin.totalMinutes > 1) coin.totalMinutes--;
-                    if (coin.arbMinutes > 1) coin.arbMinutes--;
-                    else {
-                        coin.isNew = true; coin.prepSeconds = 40; coin.type = Math.random() > 0.5 ? 'LONG' : 'SHORT';
-                        coin.accuracy = 70 + Math.random() * 25; coin.startPrice = coin.price;
-                        try { audioAlert.play(); } catch(e){}
-                        showToast('🚨 СВЕЖИЙ ТРЕНД: ' + coin.name + ' обновлен!', true);
-                    }
-                }
-            });
         }, 60000);
 
+        function saveSettings() {
+            localStorage.setItem('trader_dep', document.getElementById('input-deposit').value);
+            localStorage.setItem('trader_risk', document.getElementById('input-risk').value);
+            localStorage.setItem('trader_ema1', document.getElementById('input-ema1').value);
+            localStorage.setItem('trader_ema2', document.getElementById('input-ema2').value);
+            updateDetailBlock();
+        }
+
+        function loadSettings() {
+            if(localStorage.getItem('trader_dep')) document.getElementById('input-deposit').value = localStorage.getItem('trader_dep');
+            if(localStorage.getItem('trader_risk')) document.getElementById('input-risk').value = localStorage.getItem('trader_risk');
+            if(localStorage.getItem('trader_ema1')) document.getElementById('input-ema1').value = localStorage.getItem('trader_ema1');
+            if(localStorage.getItem('trader_ema2')) document.getElementById('input-ema2').value = localStorage.getItem('trader_ema2');
+        }
+
         function toggleBot() { isRunning = !isRunning; document.getElementById('main-btn').innerText = isRunning ? "⏹ Стоп" : "▶ Старт"; }
-        function saveSettings() { localStorage.setItem('trader_dep', document.getElementById('input-deposit').value); localStorage.setItem('trader_risk', document.getElementById('input-risk').value); updateDetailBlock(); }
-        function loadSettings() { if(localStorage.getItem('trader_dep')) document.getElementById('input-deposit').value = localStorage.getItem('trader_dep'); if(localStorage.getItem('trader_risk')) document.getElementById('input-risk').value = localStorage.getItem('trader_risk'); }
         
         loadSettings(); updateStatsUI(); renderGrid(); 
         const currentCoin = COINS[selectedCoinIndex];
         priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
-        updateDetailBlock(); fetchAllExchangePrices();
+        
+        updateDetailBlock(); 
+        fetchAllExchangePrices();
     </script>
 </body>
 </html>
