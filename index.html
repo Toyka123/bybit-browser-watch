@@ -349,7 +349,7 @@
 
         function startBybitWebSocket() {
             try {
-                // Base64-код официального WebSocket-сервера Bybit
+                // Закодированная Base64 строка официального сокета Bybit
                 var encUrl = "d3NzOi8vc3RyZWFtLmJ5Yml0LmNvbS92NS9wdWJsaWMvc3BvdA==";
                 var fullSocketUrl = atob(encUrl);
 
@@ -357,7 +357,6 @@
 
                 bybitSocket.onopen = function() {
                     console.log("Соединение с Bybit WebSocket успешно установлено!");
-                    // Формируем подписку на тикеры для всех монет из массива COINS
                     var symbolsToSubscribe = COINS.map(function(coin) { return "tickers." + coin.ticker; });
                     var subscribeRequest = { 
                         op: "subscribe", 
@@ -372,25 +371,15 @@
                     
                     if (msg && msg.topic && msg.data) {
                         var tickerName = msg.topic.replace("tickers.", "");
-                        var rawData = msg.data;
+                        var marketData = msg.data;
                         
-                        // Bybit может присылать данные как объектом, так и массивом из одного элемента
-                        var marketData = Array.isArray(rawData) ? rawData[0] : rawData;
-                        
-                        if (marketData && marketData.lastPrice) {
+                        if (marketData.lastPrice) {
                             var liveRealPrice = parseFloat(marketData.lastPrice);
                             
                             COINS.forEach(function(coin, idx) {
                                 if (coin.ticker === tickerName) {
-                                    // Корректируем стартовую цену для отрисовки уровней графиков
-                                    if (coin.type === 'NONE') {
-                                        coin.startPrice = liveRealPrice;
-                                    }
-                                    
-                                    // Обновляем текущую цену на реальную рыночную
                                     coin.price = liveRealPrice;
                                     
-                                    // Математические колебания индикаторов для анализа в реальном времени
                                     coin.rsi += (Math.random() - 0.5) * 4;
                                     if (coin.rsi < 20) coin.rsi = 22; if (coin.rsi > 80) coin.rsi = 78;
                                     
@@ -401,7 +390,6 @@
                                         coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN'; 
                                     }
 
-                                    // Логика автоматической выдачи торгового Pro-сигнала
                                     if (currentMode === 'signals' && coin.type === 'NONE') {
                                         if (coin.trend === 'UP' && coin.rsi > 42 && coin.rsi < 58 && coin.volPower > 52) {
                                             coin.type = 'LONG'; 
@@ -420,16 +408,12 @@
                                             showToast('🔥 СНАЙПЕРСКИЙ SHORT: ' + coin.name + ' — индикаторы подтверждены!', false);
                                         }
                                     }
-                                    
-                                    // Пишем тики в историю для отрисовки синей линии графика
                                     if (idx === selectedCoinIndex) { 
                                         priceHistory.shift(); 
                                         priceHistory.push(liveRealPrice); 
                                     }
                                 }
                             });
-                            
-                            // Мгновенно перерисовываем карточки и блок подробностей
                             renderGrid(); 
                             updateDetailBlock();
                         }
@@ -484,13 +468,40 @@
 
         function toggleBot() { isRunning = !isRunning; document.getElementById('main-btn').innerText = isRunning ? "⏹ Стоп" : "▶ Старт"; }
         
-        loadSettings(); updateStatsUI(); renderGrid();
-        const currentCoin = COINS[selectedCoinIndex];
-        priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
-        updateDetailBlock(); 
-        
-        // Запуск сокет-клиента
-        fetchAllExchangePrices();
+        // Защищенный от CORS экспресс-запрос стартовых цен Bybit
+        async function loadInitialPrices() {
+            try {
+                // Скрытый Base64-путь к CORS-шлюзу AllOrigins и спотовому эндпоинту Bybit
+                var encProxy = "aHR0cHM6Ly9hcGkuYWxsb3JpZ2lucy53aW4vcmF3P3VybD0=";
+                var encApi = "aHR0cHM6Ly9hcGkuYnliaXQuY29tL3Y1L21hcmtldC90aWNrZXJzP2NhdGVnb3J5PXNwb3Q=";
+                
+                var response = await fetch(atob(encProxy) + encodeURIComponent(atob(encApi)));
+                var json = await response.json();
+                
+                if (json && json.result && json.result.list) {
+                    var list = json.result.list;
+                    COINS.forEach(function(coin) {
+                        var market = list.find(function(t) { return t.symbol === coin.ticker; });
+                        if (market && market.lastPrice) {
+                            coin.price = parseFloat(market.lastPrice);
+                            coin.startPrice = coin.price;
+                        }
+                    });
+                }
+            } catch(e) { 
+                console.log("Первичная синхронизация базовых цен..."); 
+            }
+            
+            // Запуск рендеринга интерфейса и WebSocket потока
+            updateStatsUI(); renderGrid();
+            const currentCoin = COINS[selectedCoinIndex];
+            priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
+            updateDetailBlock(); startBybitWebSocket();
+        }
+
+        loadSettings();
+        // Запуск полной синхронизации с рынком Bybit
+        loadInitialPrices();
     </script>
 </body>
 </html>
