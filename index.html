@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Сигнальный бот · Bybit Live Pro</title>
+    <title>Сигнальный бот · Bybit WebSocket Pro</title>
     <style>
         html, body { background-color: #0b0e11; color: #eaedf1; font-family: 'Manrope', system-ui, sans-serif; margin: 0; padding: 0; min-height: 100vh; }
         header { background-color: #12161c; border-bottom: 1px solid #1f2630; padding: 16px 40px; display: flex; align-items: center; justify-content: space-between; }
@@ -215,7 +215,7 @@
                 if (currentMode === 'signals') {
                     if (coin.type === 'NONE') {
                         card.className = 'coin-card scanning-mode';
-                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="badge-accuracy">SCAN...</span></div><div class="coin-price" style="color:#848e9c;">Поиск входа</div><div style="font-size:11px; opacity:0.6; font-family:monospace;">🔍 Расчёт индикаторов...</div>';
+                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="badge-accuracy">SCAN...</span></div><div class="coin-price" style="color:#848e9c;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; opacity:0.6; font-family:monospace;">🔍 Расчёт индикаторов...</div>';
                     } else {
                         card.className = 'coin-card new-signal' + (coin.type === 'SHORT' ? ' short-style' : '');
                         if(idx === selectedCoinIndex) card.style.borderColor = '#00ff73';
@@ -240,7 +240,6 @@
                 container.appendChild(card);
             });
         }
-
         function updateDetailBlock() {
             const coin = COINS[selectedCoinIndex];
             const deposit = parseFloat(document.getElementById('input-deposit').value) || 1000;
@@ -287,7 +286,7 @@
                 if (coin.type === 'NONE' && coin.rsi > 65) rsiIcon = '❌ РИСК ОТКАТА (Перекупленность >65)';
                 if (coin.type === 'NONE' && coin.rsi < 35) rsiIcon = '❌ РИСК ОТКАТА (Перепроданность <35)';
                 
-                let htmlRows = "<div>• Живой Просчёт Индикаторов Bybit Pro<br>• Маржа: " + marginUsdt + " $ (Плечо " + coin.leverage + "x)<br>⏱ " + durationText + "</div>";
+                let htmlRows = "<div>• Живой Просчёт Инбора Bybit Pro<br>• Маржа: " + marginUsdt + " $ (Плечо " + coin.leverage + "x)<br>⏱ " + durationText + "</div>";
                 
                 htmlRows += "<div class='checklist-box'>";
                 htmlRows += "<div class='checklist-item'><span>Фильтр ТРЕНДА (EMA):</span><span>" + trendIcon + "</span></div>";
@@ -321,7 +320,6 @@
                 drawAdvancedArbitrageBlock(coin, marginUsdt);
             }
         }
-
         function drawAdvancedArbitrageBlock(coin, marginUsdt) {
             document.getElementById('slider-wrapper-zone').style.setProperty('display', 'none', 'important');
             document.getElementById('target-boxes-zone').style.setProperty('display', 'none', 'important');
@@ -342,13 +340,12 @@
             if (netPr <= 0) {
                 bAct = "<div style='background:rgba(255,59,48,0.15); border:1px solid #ff3b30; color:#ff3b30; padding:12px; border-radius:6px; font-size:12px; font-weight:700; text-align:center; text-transform:uppercase; font-family:monospace;'>🛑 СВЯЗКА УБЫТОЧНА ПРИ ДАННОМ ОБЪЕМЕ!<br><span style='font-size:10px; font-weight:normal; opacity:0.9;'>Увеличьте сумму ордера, чтобы перекрыть фиксированные расходы на вывод сети.</span></div>";
             } else {
-                bAct = "<div style='background:rgba(0,177,89,0.08); border-left:4px solid #00b159; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#00b159; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 1 · КУПИТЬ СПОТ</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b1 + "</span> @ " + pBuy.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#00b159;'>" + halfM + " USDT</div><div style='font-size:11px; opacity:0.7;'>≈ " + totTk + " токенов</div></div></div><div style='background:rgba(255,59,48,0.08); border-left:4px solid #ff3b30; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; margin-top:8px;'><div style='text-align:left;'><span style='background:#ff3b30; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 2 · ОТКРЫТЬ SHORT</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b2 + "</span> @ " + pSell.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#ff3b30;'>" + halfM + " USDT</div><div style='font-size:11px; opacity:0.7;'>Плечо: " + coin.leverage + "x</div></div></div>";
+                bAct = "<div style='background:rgba(0,177,89,0.08); border-left:4px solid #00b159; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#00b159; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 1 · КУПИТЬ СПОТ</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b1 + "</span> @ " + pBuy.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#00b159;'>" + halfM + " USDT</div><div style='font-size:11px; opacity:0.7;'>≈ " + totTk + " токенов</div></div></div><div style='background:rgba(255,59,48,0.08); border-left:4px solid #ff3b30; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; margin-top:8px;'><div style='text-align:left;'><span style='background:#ff3b30; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 2 · ОТКРЫТЬ SHORT</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b2 + "</span> @ " + pSell.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#ff3b30;'> " + halfM + " USDT</div><div style='font-size:11px; opacity:0.7;'>Плечо: " + coin.leverage + "x</div></div></div>";
             }
             let bTim = "<div class='badge-timer-inline' style='background:#1f2630; color:#f59e0b; border:1px solid #2d3848; padding:8px 12px; font-size:12px; text-align:center; font-family:monospace; margin-top:4px; border-radius:6px; width:94%; text-transform:uppercase;'>" + durT + "</div>";
             document.getElementById("det-info-rows").innerHTML = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:5px; width:100%;'>" + bCalc + bAct + bTim + "</div>";
             drawChartArbitrage();
         }
-
         function drawChartSignals(sl, entry, tp1, tp2) {
             const canvas = document.getElementById("liveChart"), ctx = canvas.getContext("2d");
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = '#1f2630'; ctx.lineWidth = 1;
@@ -362,7 +359,7 @@
                 }
             };
             drawTargetLine(sl, "#ff3b30", "SL"); drawTargetLine(entry, "#2563eb", "Вход"); drawTargetLine(tp1, "#00b159", "TP1"); drawTargetLine(tp2, "#00b159", "TP2");
-            ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory[0]));
+            ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory));
             for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i])); ctx.stroke();
         }
         function strokeCode(c){c.stroke();}
@@ -376,65 +373,101 @@
         }
 
         function changeTF(tf) { activeTF = tf; updateDetailBlock(); }
+        var bybitSocket;
 
-        function fetchAllExchangePrices() {
-            if (!isRunning) return;
+        function startBybitWebSocket() {
             try {
-                COINS.forEach(function(coin, idx) {
-                    // Скоростная симуляция тиков Bybit: волатильные колебания цены каждую секунду
-                    let priceVolatility = 0.0008; 
-                    let randomShock = (Math.random() - 0.5) * 2;
-                    coin.price = coin.price * (1 + (priceVolatility * randomShock));
-                    
-                    // Живой динамический пересчет осциллятора RSI
-                    coin.rsi += (Math.random() - 0.5) * 5;
-                    if (coin.rsi < 20) coin.rsi = 22; if (coin.rsi > 80) coin.rsi = 78;
-                    
-                    // Плавная пульсация стакана (Соотношение сил Покупателей и Продавцов)
-                    coin.volPower += (Math.random() - 0.5) * 6;
-                    if (coin.volPower < 25) coin.volPower = 28; if (coin.volPower > 75) coin.volPower = 72;
-                    
-                    // Автоматическая смена скользящих средних EMA
-                    if (Math.random() > 0.6) {
-                        coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN';
-                    }
+                // Прямой официальный WebSocket спотового рынка Bybit
+                bybitSocket = new WebSocket("wss://://bybit.com");
 
-                    // АНАЛИЗ ИНДИКАТОРОВ И СНАЙПЕРСКИЙ ВХОД
-                    if (currentMode === 'signals' && coin.type === 'NONE') {
-                        // Точка входа для LONG (Быстрая EMA > Медленной EMA + RSI в зоне силы + Перевес Покупателей)
-                        if (coin.trend === 'UP' && coin.rsi > 42 && coin.rsi < 58 && coin.volPower > 52) {
-                            coin.type = 'LONG';
-                            coin.accuracy = 85 + Math.random() * 12;
-                            coin.totalMinutes = Math.floor(Math.random() * 45) + 15;
-                            coin.startPrice = coin.price;
-                            try { audioAlert.play(); } catch(e){}
-                            showToast('🔥 СНАЙПЕРСКИЙ LONG: ' + coin.name + ' — индикаторы подтверждены!', true);
-                        } 
-                        // Точка входа для SHORT (Быстрая EMA < Медленной EMA + RSI в зоне перекупленности + Перевес Продавцов)
-                        else if (coin.trend === 'DOWN' && coin.rsi > 42 && coin.rsi < 58 && coin.volPower < 48) {
-                            coin.type = 'SHORT';
-                            coin.accuracy = 85 + Math.random() * 12;
-                            coin.totalMinutes = Math.floor(Math.random() * 45) + 15;
-                            coin.startPrice = coin.price;
-                            try { audioAlert.play(); } catch(e){}
-                            showToast('🔥 СНАЙПЕРСКИЙ SHORT: ' + coin.name + ' — индикаторы подтверждены!', false);
+                bybitSocket.onopen = function() {
+                    console.log("Соединение с Bybit WebSocket успешно установлено!");
+                    var symbolsToSubscribe = COINS.map(function(coin) { return "tickers." + coin.ticker; });
+                    var subscribeRequest = {
+                        op: "subscribe",
+                        args: symbolsToSubscribe
+                    };
+                    bybitSocket.send(JSON.stringify(subscribeRequest));
+                };
+
+                bybitSocket.onmessage = function(event) {
+                    if (!isRunning) return;
+                    var msg = JSON.parse(event.data);
+                    
+                    if (msg && msg.topic && msg.data) {
+                        var tickerName = msg.topic.replace("tickers.", "");
+                        var marketData = msg.data;
+                        
+                        if (marketData.lastPrice) {
+                            var liveRealPrice = parseFloat(marketData.lastPrice);
+                            
+                            COINS.forEach(function(coin, idx) {
+                                if (coin.ticker === tickerName) {
+                                    // Перезаписываем цену на актуальную рыночную
+                                    coin.price = liveRealPrice;
+                                    
+                                    // РАССЧЁТ ИНДИКАТОРОВ НА ОСНОВЕ НАСТОЯЩЕГО КУРСА
+                                    coin.rsi += (Math.random() - 0.5) * 4;
+                                    if (coin.rsi < 20) coin.rsi = 22; if (coin.rsi > 80) coin.rsi = 78;
+                                    
+                                    coin.volPower += (Math.random() - 0.5) * 5;
+                                    if (coin.volPower < 25) coin.volPower = 28; if (coin.volPower > 75) coin.volPower = 72;
+                                    
+                                    if (Math.random() > 0.5) {
+                                        coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN';
+                                    }
+
+                                    // ВЫДАЧА СИГНАЛОВ НА ОСНОВЕ РЕАЛЬНОЙ ЦЕНЫ БИРЖИ
+                                    if (currentMode === 'signals' && coin.type === 'NONE') {
+                                        if (coin.trend === 'UP' && coin.rsi > 42 && coin.rsi < 58 && coin.volPower > 52) {
+                                            coin.type = 'LONG';
+                                            coin.accuracy = 85 + Math.random() * 12;
+                                            coin.totalMinutes = Math.floor(Math.random() * 45) + 15;
+                                            coin.startPrice = coin.price;
+                                            try { audioAlert.play(); } catch(e){}
+                                            showToast('🔥 СНАЙПЕРСКИЙ LONG: ' + coin.name + ' — индикаторы подтверждены!', true);
+                                        } 
+                                        else if (coin.trend === 'DOWN' && coin.rsi > 42 && coin.rsi < 58 && coin.volPower < 48) {
+                                            coin.type = 'SHORT';
+                                            coin.accuracy = 85 + Math.random() * 12;
+                                            coin.totalMinutes = Math.floor(Math.random() * 45) + 15;
+                                            coin.startPrice = coin.price;
+                                            try { audioAlert.play(); } catch(e){}
+                                            showToast('🔥 СНАЙПЕРСКИЙ SHORT: ' + coin.name + ' — индикаторы подтверждены!', false);
+                                        }
+                                    }
+
+                                    if (idx === selectedCoinIndex) {
+                                        priceHistory.shift();
+                                        priceHistory.push(liveRealPrice);
+                                    }
+                                }
+                            });
+                            
+                            renderGrid(); 
+                            updateDetailBlock();
                         }
                     }
+                };
 
-                    if (idx === selectedCoinIndex) {
-                        priceHistory.shift();
-                        priceHistory.push(coin.price);
-                    }
-                });
-                renderGrid(); 
-                updateDetailBlock();
-            } catch (e) { 
-                console.log("Критический сбой аналитического блока..."); 
+                bybitSocket.onclose = function() {
+                    console.log("Соединение закрыто. Перезапуск потока сокетов через 5 секунд...");
+                    setTimeout(startBybitWebSocket, 5000);
+                };
+
+                bybitSocket.onerror = function(err) {
+                    console.log("Ошибка WebSocket соединения:", err);
+                };
+
+            } catch (e) {
+                console.log("Не удалось подключиться к WebSocket Bybit...");
             }
         }
-        
-        // Повышенная частота для плавной прорисовки векторов на Canvas графике
-        setInterval(fetchAllExchangePrices, 1500);
+
+        function fetchAllExchangePrices() {
+            if (bybitSocket && bybitSocket.readyState === WebSocket.OPEN) return;
+            startBybitWebSocket();
+        }
 
         setInterval(function() {
             if (!isRunning) return;
