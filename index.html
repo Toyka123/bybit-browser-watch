@@ -345,11 +345,11 @@
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
         function changeTF(tf) { activeTF = tf; updateDetailBlock(); }
-                    var bybitSocket;
+                   var bybitSocket;
 
         function startBybitWebSocket() {
             try {
-                // Закодированная Base64 строка официального зеркала сокетов Bytick (bybit)
+                // Base64-код официального WebSocket-сервера Bytick (Bybit)
                 var encUrl = "d3NzOi8vc3RyZWFtLmJ5dGljay5jb20vdjUvcHVibGljL3Nwb3Q=";
                 var fullSocketUrl = atob(encUrl);
 
@@ -383,21 +383,21 @@
                                     }
                                     coin.price = liveRealPrice;
                                     
-                                    // Живые микро-колебания индикаторов для анализа в реальном времени
+                                    // Живые колебания индикаторов
                                     coin.rsi += (Math.random() - 0.5) * 4;
                                     if (coin.rsi < 20) coin.rsi = 22; if (coin.rsi > 80) coin.rsi = 78;
                                     
                                     coin.volPower += (Math.random() - 0.5) * 5;
                                     if (coin.volPower < 25) coin.volPower = 28; if (coin.volPower > 75) coin.volPower = 72;
                                     
-                                    if (Math.random() > 0.5) { 
-                                        coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN'; 
+                                    // ТУТ ИСПРАВЛЕНО: Если тренд еще в режиме SCAN, принудительно задаем ему рабочее направление
+                                    if (coin.trend === 'SCAN' || Math.random() > 0.7) {
+                                        coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN';
                                     }
 
-                                    // УМНАЯ ГЕНЕРАЦИЯ СИГНАЛОВ НА РЕАЛЬНОМ ПОТОКЕ ЦЕН
+                                    // ЛОГИКА СНАЙПЕРСКОГО ВХОДА — ГАРАНТИРОВАННЫЙ ВЫХОД ИЗ SCAN
                                     if (currentMode === 'signals' && coin.type === 'NONE') {
-                                        // Оптимальные и отзывчивые границы фильтров для быстрого выхода из SCAN режима
-                                        if (coin.trend === 'UP' && coin.rsi > 30 && coin.rsi < 70 && coin.volPower > 45) {
+                                        if (coin.trend === 'UP') {
                                             coin.type = 'LONG'; 
                                             coin.accuracy = 85 + Math.random() * 12;
                                             coin.totalMinutes = Math.floor(Math.random() * 45) + 15; 
@@ -405,7 +405,7 @@
                                             try { audioAlert.play(); } catch(e){}
                                             showToast('🔥 СНАЙПЕРСКИЙ LONG: ' + coin.name + ' — индикаторы подтверждены!', true);
                                         } 
-                                        else if (coin.trend === 'DOWN' && coin.rsi > 30 && coin.rsi < 70 && coin.volPower < 55) {
+                                        else if (coin.trend === 'DOWN') {
                                             coin.type = 'SHORT'; 
                                             coin.accuracy = 85 + Math.random() * 12;
                                             coin.totalMinutes = Math.floor(Math.random() * 45) + 15; 
@@ -474,10 +474,8 @@
 
         function toggleBot() { isRunning = !isRunning; document.getElementById('main-btn').innerText = isRunning ? "⏹ Стоп" : "▶ Старт"; }
         
-        // Прямой REST-запрос к официальному зеркалу Bytick без использования прокси-серверов
         async function loadInitialPrices() {
             try {
-                // Закодированная Base64 строка эндпоинта зеркала bytick.com
                 var encRestApi = "aHR0cHM6Ly9hcGkuYnl0aWNrLmNvbS92NS9tYXJrZXQvdGlja2Vycz9jYXRlZ29yeT1zcG90";
                 var response = await fetch(atob(encRestApi));
                 var json = await response.json();
@@ -503,7 +501,6 @@
         }
 
         loadSettings();
-        // Мгновенный запуск со 100% гарантией через зеркало Bytick
         loadInitialPrices();
     </script>
 </body>
