@@ -42,7 +42,6 @@
         .btn-action { border: none; border-radius: 6px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; background-color: #ff3b30; color: #fff; transition: background-color 0.2s; }
         .btn-action:hover { background-color: #e0332a; }
         .detail-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; }
-
         .detail-card { background: #12161c; border: 1px solid #1f2630; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px; transition: background-color 0.4s; }
         .detail-card.orange-alert { background-color: #995c00; border-color: #ff9400; }
         .detail-header-info { display: flex; justify-content: space-between; align-items: flex-start; }
@@ -50,7 +49,6 @@
         .detail-main-price { font-size: 26px; font-weight: 700; font-family: monospace; color: #ffffff; }
         .info-row { font-size: 13px; color: #848e9c; line-height: 1.6; }
         .detail-card.orange-alert .info-row { color: #eaedf1; }
-
         .badge-timer-inline { background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 4px 8px; border-radius: 4px; font-weight: 700; font-family: monospace; display: inline-block; margin-top: 6px; }
         .detail-card.orange-alert .badge-timer-inline { background: #ffffff; color: #cc7a00; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #848e9c; font-weight: 600; }
@@ -58,7 +56,6 @@
         .slider-pointer { width: 10px; height: 10px; background: #ffffff; border: 2px solid #2563eb; border-radius: 50%; position: absolute; top: -2px; left: 50%; transform: translateX(-50%); transition: left 0.2s ease-out; }
         .slider-values { display: flex; justify-content: space-between; font-size: 12px; font-family: monospace; font-weight: 700; margin-top: 6px; }
         .target-blocks-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-
         .target-box { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 12px; text-align: center; }
         .target-box-title { font-size: 10px; color: #848e9c; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }
         .target-box-val { font-size: 14px; font-weight: 700; font-family: monospace; }
@@ -70,7 +67,6 @@
         canvas { width: 100%; height: 260px; background: #0b0e11; border-radius: 6px; display: block; }
     </style>
 </head>
-
 <body>
     <div id="toast-container"></div>
     <header>
@@ -90,7 +86,6 @@
             <div class="form-group"><label>Мониторинг</label><div class="badge-active">Работает</div></div>
             <button class="btn-action" id="main-btn" onclick="toggleBot()">⏹ Стоп</button>
         </section>
-
         <section class="grid-stats">
             <div class="stat-card"><div class="stat-title">Отсканировано</div><div class="stat-value" id="count-scanned">14</div></div>
             <div class="stat-card"><div class="stat-title">Сигналов найдено</div><div class="stat-value" id="label-total-signals" style="color:#00b159;">58 Сигналов</div></div>
@@ -282,37 +277,32 @@
             document.getElementById('target-boxes-zone').style.setProperty('display', 'none', 'important');
             document.getElementById("det-name").innerHTML = '🔄 МЕЖБИРЖЕВОЙ АРБИТРАЖ: ' + coin.name;
             let pBuy = coin.price, pSell = coin.price * (1 + (coin.spread / 100));
-            
-            let currentArbInput = document.getElementById('input-arb-calc-val') ? parseFloat(document.getElementById('input-arb-calc-val').value) : parseFloat(marginUsdt);
-            if (isNaN(currentArbInput) || currentArbInput <= 0) { currentArbInput = parseFloat(marginUsdt); }
-            
-            let exchangeFeesPercent = 0.16; 
-            let cleanSpreadPercent = coin.spread - exchangeFeesPercent;
-            let slippageImpact = (currentArbInput / 100) * 0.02;
-            let finalSpreadPercent = cleanSpreadPercent - slippageImpact;
-            let networkWithdrawalFeeUsdt = 0.50; 
-            let dirtyProfit = currentArbInput * (finalSpreadPercent / 100);
-            let netProfit = dirtyProfit - networkWithdrawalFeeUsdt;
-            
-            document.getElementById("det-price").innerText = (netProfit > 0 ? "+" : "") + ((netProfit / currentArbInput) * 100).toFixed(2) + "%";
-            let halfMargin = (currentArbInput / 2).toFixed(2);
-            let totalTokens = ((halfMargin * coin.leverage) / coin.price).toFixed(1);
-            let exitTime = new Date(Date.now() + coin.arbMinutes * 60000);
-            let hh = exitTime.getHours(), mm = exitTime.getMinutes();
+            let curInp = document.getElementById('input-arb-calc-val') ? parseFloat(document.getElementById('input-arb-calc-val').value) : parseFloat(marginUsdt);
+            if (isNaN(curInp) || curInp <= 0) { curInp = parseFloat(marginUsdt); }
+            let feeP = 0.16;
+            let cleanS = coin.spread - feeP;
+            let slipI = (curInp / 100) * 0.02;
+            let finalS = cleanS - slipI;
+            let netF = 0.50;
+            let dirtyPr = curInp * (finalS / 100);
+            let netPr = dirtyPr - netF;
+            document.getElementById("det-price").innerText = (netPr > 0 ? "+" : "") + ((netPr / curInp) * 100).toFixed(2) + "%";
+            let halfM = (curInp / 2).toFixed(2);
+            let totTk = ((halfM * coin.leverage) / coin.price).toFixed(1);
+            let exT = new Date(Date.now() + coin.arbMinutes * 60000);
+            let hh = exT.getHours(), mm = exT.getMinutes();
             if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
-            let durationText = coin.isNew ? "ОКНО ЗАКРОЕТСЯ ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Спред активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.arbMinutes) + ")";
-            let profitColor = netProfit > 0 ? '#00b159' : '#ff3b30';
-            
-            let calcBlock = "<div style='background:#1f2630; border:1px solid #2d3848; padding:10px; border-radius:6px; display:flex; flex-direction:column; gap:6px; margin-bottom:4px;'><div style='display:flex; justify-content:space-between; align-items:center;'><label style='font-size:10px; font-weight:700; color:#848e9c;'>СУММА ОРДЕРА, $:</label><input type='number' id='input-arb-calc-val' value='" + currentArbInput + "' oninput='updateDetailBlock()' style='width:90px; background:#0b0e11; border:1px solid #2d3848; color:#fff; border-radius:4px; padding:4px 8px; font-size:12px; font-family:monospace; text-align:right; outline:none;'></div><div style='font-size:11px; opacity:0.7; color:#848e9c; border-top:1px solid #2d3848; padding-top:4px; margin-top:2px; line-height:1.4;'>• Комиссии бирж (Fee): <span style='color:#ff3b30;'>-" + exchangeFeesPercent + "%</span><br>• Проскальзывание (Slippage): <span style='color:#ff3b30;'>-" + slippageImpact.toFixed(3) + "%</span><br>• Вывод сети (Withdrawal): <span style='color:#ff3b30;'>-" + networkWithdrawalFeeUsdt.toFixed(2) + " USDT</span></div><div style='display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #2d3848; padding-top:6px; margin-top:2px;'><span style='font-size:11px; font-weight:700; color:#eaedf1;'>💰 ЧИСТАЯ ПРИБЫЛЬ:</span><span style='font-size:13px; font-weight:900; color:" + profitColor + "; font-family:monospace;'>" + (netProfit > 0 ? "+" : "") + netProfit.toFixed(2) + " USDT</span></div></div>";
-            
-            let actionBlocks = "";
-            if (netProfit <= 0) {
-                actionBlocks = "<div style='background:rgba(255,59,48,0.15); border:1px solid #ff3b30; color:#ff3b30; padding:12px; border-radius:6px; font-size:12px; font-weight:700; text-align:center; text-transform:uppercase; font-family:monospace;'>🛑 СВЯЗКА УБЫТОЧНА ПРИ ДАННОМ ОБЪЕМЕ!<br><span style='font-size:10px; font-weight:normal; opacity:0.9;'>Увеличьте сумму ордера, чтобы перекрыть фиксированные расходы на вывод сети.</span></div>";
+            let durT = coin.isNew ? "ОКНО ЗАКРОЕТСЯ ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Спред активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.arbMinutes) + ")";
+            let prCol = netPr > 0 ? '#00b159' : '#ff3b30';
+            let bCalc = "<div style='background:#1f2630; border:1px solid #2d3848; padding:10px; border-radius:6px; display:flex; flex-direction:column; gap:6px; margin-bottom:4px;'><div style='display:flex; justify-content:space-between; align-items:center;'><label style='font-size:10px; font-weight:700; color:#848e9c;'>СУММА ОРДЕРА, $:</label><input type='number' id='input-arb-calc-val' value='" + curInp + "' oninput='updateDetailBlock()' style='width:90px; background:#0b0e11; border:1px solid #2d3848; color:#fff; border-radius:4px; padding:4px 8px; font-size:12px; font-family:monospace; text-align:right; outline:none;'></div><div style='font-size:11px; opacity:0.7; color:#848e9c; border-top:1px solid #2d3848; padding-top:4px; margin-top:2px; line-height:1.4;'>• Комиссии бирж (Fee): <span style='color:#ff3b30;'>-" + feeP + "%</span><br>• Проскальзывание (Slippage): <span style='color:#ff3b30;'>-" + slipI.toFixed(3) + "%</span><br>• Вывод сети (Withdrawal): <span style='color:#ff3b30;'>-" + netF.toFixed(2) + " USDT</span></div><div style='display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #2d3848; padding-top:6px; margin-top:2px;'><span style='font-size:11px; font-weight:700; color:#eaedf1;'>💰 ЧИСТАЯ ПРИБЫЛЬ:</span><span style='font-size:13px; font-weight:900; color:" + prCol + "; font-family:monospace;'>" + (netPr > 0 ? "+" : "") + netPr.toFixed(2) + " USDT</span></div></div>";
+            let bAct = "";
+            if (netPr <= 0) {
+                bAct = "<div style='background:rgba(255,59,48,0.15); border:1px solid #ff3b30; color:#ff3b30; padding:12px; border-radius:6px; font-size:12px; font-weight:700; text-align:center; text-transform:uppercase; font-family:monospace;'>🛑 СВЯЗКА УБЫТОЧНА ПРИ ДАННОМ ОБЪЕМЕ!<br><span style='font-size:10px; font-weight:normal; opacity:0.9;'>Увеличьте сумму ордера, чтобы перекрыть фиксированные расходы на вывод сети.</span></div>";
             } else {
-                actionBlocks = "<div style='background:rgba(0,177,89,0.08); border-left:4px solid #00b159; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#00b159; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 1 · КУПИТЬ СПОТ</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b1 + "</span> @ " + pBuy.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#00b159;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>≈ " + totalTokens + " токенов</div></div></div><div style='background:rgba(255,59,48,0.08); border-left:4px solid #ff3b30; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; margin-top:8px;'><div style='text-align:left;'><span style='background:#ff3b30; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 2 · ОТКРЫТЬ SHORT</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b2 + "</span> @ " + pSell.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#ff3b30;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>Плечо: " + coin.leverage + "x</div></div></div>";
+                bAct = "<div style='background:rgba(0,177,89,0.08); border-left:4px solid #00b159; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#00b159; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 1 · КУПИТЬ СПОТ</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b1 + "</span> @ " + pBuy.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#00b159;'>" + halfM + " USDT</div><div style='font-size:11px; opacity:0.7;'>≈ " + totTk + " токенов</div></div></div><div style='background:rgba(255,59,48,0.08); border-left:4px solid #ff3b30; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; margin-top:8px;'><div style='text-align:left;'><span style='background:#ff3b30; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 2 · ОТКРЫТЬ SHORT</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b2 + "</span> @ " + pSell.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#ff3b30;'>" + halfM + " USDT</div><div style='font-size:11px; opacity:0.7;'>Плечо: " + coin.leverage + "x</div></div></div>";
             }
-            let timerBlock = "<div class='badge-timer-inline' style='background:#1f2630; color:#f59e0b; border:1px solid #2d3848; padding:8px 12px; font-size:12px; text-align:center; font-family:monospace; margin-top:4px; border-radius:6px; width:94%; text-transform:uppercase;'>" + durationText + "</div>";
-            document.getElementById("det-info-rows").innerHTML = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:5px; width:100%;'>" + calcBlock + actionBlocks + timerBlock + "</div>";
+            let bTim = "<div class='badge-timer-inline' style='background:#1f2630; color:#f59e0b; border:1px solid #2d3848; padding:8px 12px; font-size:12px; text-align:center; font-family:monospace; margin-top:4px; border-radius:6px; width:94%; text-transform:uppercase;'>" + durT + "</div>";
+            document.getElementById("det-info-rows").innerHTML = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:5px; width:100%;'>" + bCalc + bAct + bTim + "</div>";
             drawChartArbitrage();
         }
 
@@ -348,7 +338,6 @@
             try {
                 const targetUrl = 'https://bybit.com';
                 const proxyApi = 'https://allorigins.win';
-                
                 const response = await fetch(proxyApi + encodeURIComponent(targetUrl));
                 const data = await response.json();
                 if (data && data.result && data.result.list) {
@@ -366,7 +355,7 @@
                     });
                     renderGrid(); updateDetailBlock();
                 }
-            } catch (e) { console.log("Сетевой шлюз Bybit API обновляет потоки котировок..."); }
+            } catch (e) { console.log("Сетевой шлюз API перезагружается или заблокирован CORS..."); }
         }
         
         setInterval(fetchAllExchangePrices, 3000);
@@ -415,12 +404,9 @@
         }
 
         function toggleBot() { isRunning = !isRunning; document.getElementById('main-btn').innerText = isRunning ? "⏹ Стоп" : "▶ Старт"; }
-        
         loadSettings(); updateStatsUI(); renderGrid(); 
-        
         const currentCoin = COINS[selectedCoinIndex];
         priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
-        
         updateDetailBlock(); fetchAllExchangePrices();
     </script>
 </body>
