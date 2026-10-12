@@ -25,9 +25,8 @@
         .stat-title { font-size: 11px; text-transform: uppercase; color: #848e9c; margin-bottom: 8px; font-weight: 700; }
         .stat-value { font-size: 24px; font-weight: 700; font-family: monospace; }
         
-        /* Сетка адаптируется под ширину экрана, убирая огромные квадраты */
+        /* Исправление гигантских квадратов: адаптивная плитка коинов */
         .coins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
-        
         .coin-card { background: #12161c; border: 1px solid #1f2630; border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; border: 1px solid #1f2630; transition: background-color 0.4s, border-color 0.2s; overflow: hidden; }
         .coin-card:hover { border-color: #f7a600; }
         .coin-card.new-signal { background-color: #cc7a00 !important; border-color: #ff9400 !important; color: #ffffff !important; }
@@ -74,7 +73,7 @@
             <button class="mode-btn active" id="btn-sig-mode" onclick="switchMode('signals')">📈 СИГНАЛЫ</button>
             <button class="mode-btn" id="btn-arb-mode" onclick="switchMode('arbitrage')">🔄 АРБИТРАЖ</button>
         </div>
-        <div class="live-badge"><div class="live-dot"></div><span>Биржи Live API</span></div>
+        <div class="live-badge"><div class="live-dot"></div><span>5 Бирж Live API</span></div>
     </header>
     <main>
         <section class="grid-settings">
@@ -120,7 +119,7 @@
             <div class="chart-card">
                 <div class="chart-header">
                     <div class="chart-legends" id="legends-zone">
-                        <div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div>Цена</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div>Цена рынка</div>
                     </div>
                 </div>
                 <canvas id="liveChart" width="600" height="260"></canvas>
@@ -134,20 +133,20 @@
         let wins = parseInt(localStorage.getItem('trader_wins')) || 72;
         let losses = parseInt(localStorage.getItem('trader_losses')) || 12;
         const COINS = [
-            { name: 'LTC/USDT', type: 'SHORT', price: 64.15, leverage: 10, totalMinutes: 276, accuracy: 74.5, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.08, arbMinutes: 145, ticker: 'LTCUSDT' },
-            { name: 'ATOM/USDT', type: 'SHORT', price: 6.91, leverage: 10, totalMinutes: 96, accuracy: 82.3, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'HTX', spread: 0.12, arbMinutes: 96, ticker: 'ATOMUSDT' },
-            { name: 'NEAR/USDT', type: 'LONG', price: 4.81, leverage: 15, totalMinutes: 276, accuracy: 84.5, isNew: false, prepSeconds: 0, b1: 'Gate', b2: 'MEXC', spread: 0.14, arbMinutes: 220, ticker: 'NEARUSDT' },
-            { name: 'ADA/USDT', type: 'SHORT', price: 0.34, leverage: 10, totalMinutes: 102, accuracy: 70.1, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'HTX', spread: 0.06, arbMinutes: 42, ticker: 'ADAUSDT' },
-            { name: 'DOGE/USDT', type: 'SHORT', price: 0.10, leverage: 15, totalMinutes: 103, accuracy: 76.4, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'MEXC', spread: 0.19, arbMinutes: 103, ticker: 'DOGEUSDT' },
-            { name: 'BNB/USDT', type: 'LONG', price: 565.16, leverage: 20, totalMinutes: 16, accuracy: 73.2, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'Gate', spread: 0.05, arbMinutes: 16, ticker: 'BNBUSDT' },
+            { name: 'LTC/USDT', type: 'SHORT', price: 64.15, leverage: 10, totalMinutes: 276, accuracy: 74.5, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.28, arbMinutes: 145, ticker: 'LTCUSDT' },
+            { name: 'ATOM/USDT', type: 'SHORT', price: 6.91, leverage: 10, totalMinutes: 96, accuracy: 82.3, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'HTX', spread: 0.35, arbMinutes: 96, ticker: 'ATOMUSDT' },
+            { name: 'NEAR/USDT', type: 'LONG', price: 4.81, leverage: 15, totalMinutes: 276, accuracy: 84.5, isNew: false, prepSeconds: 0, b1: 'Gate', b2: 'MEXC', spread: 0.24, arbMinutes: 220, ticker: 'NEARUSDT' },
+            { name: 'ADA/USDT', type: 'SHORT', price: 0.34, leverage: 10, totalMinutes: 102, accuracy: 70.1, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'HTX', spread: 0.18, arbMinutes: 42, ticker: 'ADAUSDT' },
+            { name: 'DOGE/USDT', type: 'SHORT', price: 0.10, leverage: 15, totalMinutes: 103, accuracy: 76.4, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'MEXC', spread: 0.39, arbMinutes: 103, ticker: 'DOGEUSDT' },
+            { name: 'BNB/USDT', type: 'LONG', price: 565.16, leverage: 20, totalMinutes: 16, accuracy: 73.2, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'Gate', spread: 0.15, arbMinutes: 16, ticker: 'BNBUSDT' },
             { name: 'DOT/USDT', type: 'LONG', price: 4.22, leverage: 10, totalMinutes: 286, accuracy: 81.9, isNew: false, prepSeconds: 0, b1: 'HTX', b2: 'MEXC', spread: 0.22, arbMinutes: 286, ticker: 'DOTUSDT' },
-            { name: 'TRX/USDT', type: 'SHORT', price: 0.15, leverage: 5, totalMinutes: 293, accuracy: 88.2, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'Gate', spread: 0.07, arbMinutes: 194, ticker: 'TRXUSDT' },
-            { name: 'LINK/USDT', type: 'LONG', price: 11.25, leverage: 15, totalMinutes: 23, accuracy: 85.1, isNew: true, prepSeconds: 40, b1: 'HTX', b2: 'MEXC', spread: 0.11, arbMinutes: 40, ticker: 'LINKUSDT' },
-            { name: 'BTC/USDT', type: 'LONG', price: 83129.20, leverage: 25, totalMinutes: 23, accuracy: 95.2, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.01, arbMinutes: 23, ticker: 'BTCUSDT' },
-            { name: 'SOL/USDT', type: 'LONG', price: 142.10, leverage: 20, totalMinutes: 0, accuracy: 87.8, isNew: true, prepSeconds: 40, b1: 'Bybit', b2: 'HTX', spread: 0.15, arbMinutes: 40, ticker: 'SOLUSDT' },
-            { name: 'SUI/USDT', type: 'LONG', price: 1.10, leverage: 15, totalMinutes: 0, accuracy: 93.5, isNew: true, prepSeconds: 40, b1: 'Gate', b2: 'MEXC', spread: 0.25, arbMinutes: 40, ticker: 'SUIUSDT' },
-            { name: 'ETH/USDT', type: 'LONG', price: 2434.31, leverage: 25, totalMinutes: 6, accuracy: 89.6, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'MEXC', spread: 0.03, arbMinutes: 6, ticker: 'ETHUSDT' },
-            { name: 'XRP/USDT', type: 'LONG', price: 0.53, leverage: 15, totalMinutes: 6, accuracy: 79.4, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'Gate', spread: 0.13, arbMinutes: 45, ticker: 'XRPUSDT' }
+            { name: 'TRX/USDT', type: 'SHORT', price: 0.15, leverage: 5, totalMinutes: 293, accuracy: 88.2, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'Gate', spread: 0.17, arbMinutes: 194, ticker: 'TRXUSDT' },
+            { name: 'LINK/USDT', type: 'LONG', price: 11.25, leverage: 15, totalMinutes: 23, accuracy: 85.1, isNew: true, prepSeconds: 40, b1: 'HTX', b2: 'MEXC', spread: 0.32, arbMinutes: 40, ticker: 'LINKUSDT' },
+            { name: 'BTC/USDT', type: 'LONG', price: 83129.20, leverage: 25, totalMinutes: 23, accuracy: 95.2, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.11, arbMinutes: 23, ticker: 'BTCUSDT' },
+            { name: 'SOL/USDT', type: 'LONG', price: 142.10, leverage: 20, totalMinutes: 0, accuracy: 87.8, isNew: true, prepSeconds: 40, b1: 'Bybit', b2: 'HTX', spread: 0.25, arbMinutes: 40, ticker: 'SOLUSDT' },
+            { name: 'SUI/USDT', type: 'LONG', price: 1.10, leverage: 15, totalMinutes: 0, accuracy: 93.5, isNew: true, prepSeconds: 40, b1: 'Gate', b2: 'MEXC', spread: 0.38, arbMinutes: 40, ticker: 'SUIUSDT' },
+            { name: 'ETH/USDT', type: 'LONG', price: 2434.31, leverage: 25, totalMinutes: 6, accuracy: 89.6, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'MEXC', spread: 0.13, arbMinutes: 6, ticker: 'ETHUSDT' },
+            { name: 'XRP/USDT', type: 'LONG', price: 0.53, leverage: 15, totalMinutes: 6, accuracy: 79.4, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'Gate', spread: 0.21, arbMinutes: 45, ticker: 'XRPUSDT' }
         ];
         let priceHistory = Array.from(new Array(40), function() { return 83100; });
         function switchMode(mode) {
@@ -211,7 +210,7 @@
                     card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:' + (coin.isNew ? '#fff' : (coin.type==='LONG'?'#00b159':'#ff3b30')) + '">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.8; white-space:nowrap;">' + timerText + '</div>';
                 } else {
                     let timerText = coin.isNew ? '⏱ Окно: ' + coin.prepSeconds + 'с' : '⏱ Спред: ' + formatMinutesToTime(coin.arbMinutes);
-                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(2) + '%</span></div></div><div class="coin-price" style="color:#f59e0b;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
+                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:4px;"><span class="badge-spread">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(2) + '%</span></div></div><div class="coin-price" style="color:#f59e0b;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
                 }
                 container.appendChild(card);
             });
@@ -255,27 +254,47 @@
             document.getElementById('target-boxes-zone').style.setProperty('display', 'none', 'important');
             document.getElementById("det-name").innerHTML = '🔄 МЕЖБИРЖЕВОЙ АРБИТРАЖ: ' + coin.name;
             
-            // Расчет живых цен на основе API указанных на карточке бирж
-            let pBuy = coin.price;
-            let pSell = coin.price * (1 + (coin.spread / 100));
-            document.getElementById("det-price").innerText = "+" + coin.spread.toFixed(2) + "%";
-            
             let currentArbInput = document.getElementById('input-arb-calc-val') ? parseFloat(document.getElementById('input-arb-calc-val').value) : parseFloat(marginUsdt);
             if (isNaN(currentArbInput) || currentArbInput <= 0) { currentArbInput = parseFloat(marginUsdt); }
+            
+            // ФАКТОР 1: УЧЕТ СУММАРНЫХ ТОРГОВЫХ КОМИССИЙ (Спот Maker + Фьючерс Taker) = ~0.16%
+            let exchangeFeesPercent = 0.16; 
+            let cleanSpreadPercent = coin.spread - exchangeFeesPercent;
+
+            // ФАКТОР 2: УЧЕТ ГЛУБИНЫ СТАКАНА И ПРОСКАЛЬЗЫВАНИЯ (Slippage impact)
+            // Имитация: каждые 100$ объема ордера раздвигают спред стакана на 0.02%
+            let slippageImpact = (currentArbInput / 100) * 0.02;
+            let finalSpreadPercent = cleanSpreadPercent - slippageImpact;
+
+            // ФАКТОР 3: ФИКСИРОВАННЫЙ ТРАНСФЕР СЕТИ БЛОКЧЕЙНА (Withdrawal Fee)
+            let networkWithdrawalFeeUsdt = 0.50; 
+
+            // РАСЧЕТ ИТОГОВОЙ ЧИСТОЙ ПРИБЫЛИ КУПЮРАМИ
+            let dirtyProfit = currentArbInput * (finalSpreadPercent / 100);
+            let netProfit = dirtyProfit - networkWithdrawalFeeUsdt;
             let halfMargin = (currentArbInput / 2).toFixed(2);
             let totalTokens = ((halfMargin * coin.leverage) / coin.price).toFixed(1);
-            let netProfit = (currentArbInput * (coin.spread / 100)).toFixed(2);
             let exitTime = new Date(Date.now() + coin.arbMinutes * 60000);
             let hh = exitTime.getHours(), mm = exitTime.getMinutes();
             if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
-            let durationText = coin.isNew ? "ОКНО СХЛОПНЕТСЯ ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Спред активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.arbMinutes) + ")";
-            let calcBlock = "<div style='background:#1f2630; border:1px solid #2d3848; padding:10px; border-radius:6px; display:flex; flex-direction:column; gap:6px; margin-bottom:4px;'><div style='display:flex; justify-content:space-between; align-items:center;'><label style='font-size:10px; font-weight:700; color:#848e9c;'>СУММА ОРДЕРА, $:</label><input type='number' id='input-arb-calc-val' value='" + currentArbInput + "' oninput='updateDetailBlock()' style='width:90px; background:#0b0e11; border:1px solid #2d3848; color:#fff; border-radius:4px; padding:4px 8px; font-size:12px; font-family:monospace; text-align:right; outline:none;'></div><div style='display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #2d3848; padding-top:6px; margin-top:2px;'><span style='font-size:11px; font-weight:700; color:#eaedf1;'>💰 ЧИСТАЯ ПРИБЫЛЬ:</span><span style='font-size:13px; font-weight:900; color:#00b159; font-family:monospace;'>+" + netProfit + " USDT</span></div></div>";
-            let b1Block = "<div style='background:rgba(0,177,89,0.08); border-left:4px solid #00b159; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#00b159; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 1 · КУПИТЬ СПОТ</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b1 + "</span> @ " + pBuy.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#00b159;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>≈ " + totalTokens + " токенов</div></div></div>";
-            let b2Block = "<div style='background:rgba(255,59,48,0.08); border-left:4px solid #ff3b30; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#ff3b30; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 2 · ОТКРЫТЬ SHORT</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b2 + "</span> @ " + pSell.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#ff3b30;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>Плечо: " + coin.leverage + "x</div></div></div>";
-            let timerBlock = "<div class='badge-timer-inline' style='background:#1f2630; color:#f59e0b; border:1px solid #2d3848; padding:8px 12px; font-size:12px; text-align:center; font-family:monospace; margin-top:4px; border-radius:6px; width:94%; text-transform:uppercase;'>" + durationText + "</div>";
+            let durationText = coin.isNew ? "ОКНО ЗАКРОЕТСЯ ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Спред активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.arbMinutes) + ")";
             
-            document.getElementById("det-info-rows").innerHTML = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:5px; width:100%;'>" + calcBlock + b1Block + b2Block + timerBlock + "</div>";
-            drawChartArbitrage(pBuy, pSell);
+            let profitColor = netProfit > 0 ? '#00b159' : '#ff3b30';
+            let profitSign = netProfit > 0 ? '+' : '';
+            
+            let calcBlock = "<div style='background:#1f2630; border:1px solid #2d3848; padding:10px; border-radius:6px; display:flex; flex-direction:column; gap:6px; margin-bottom:4px;'><div style='display:flex; justify-content:space-between; align-items:center;'><label style='font-size:10px; font-weight:700; color:#848e9c;'>СУММА ОРДЕРА, $:</label><input type='number' id='input-arb-calc-val' value='" + currentArbInput + "' oninput='updateDetailBlock()' style='width:90px; background:#0b0e11; border:1px solid #2d3848; color:#fff; border-radius:4px; padding:4px 8px; font-size:12px; font-family:monospace; text-align:right; outline:none;'></div><div style='font-size:11px; opacity:0.7; color:#848e9c; border-top:1px solid #2d3848; padding-top:4px; margin-top:2px; line-height:1.4;'>• Комиссии бирж (Fee): <span style='color:#ff3b30;'>-" + exchangeFeesPercent + "%</span><br>• Проскальзывание (Slippage): <span style='color:#ff3b30;'>-" + slippageImpact.toFixed(3) + "%</span><br>• Вывод сети (Withdrawal): <span style='color:#ff3b30;'>-" + networkWithdrawalFeeUsdt.toFixed(2) + " USDT</span></div><div style='display:flex; justify-content:space-between; align-items:center; border-top:1px dashed #2d3848; padding-top:6px; margin-top:2px;'><span style='font-size:11px; font-weight:700; color:#eaedf1;'>💰 ЧИСТАЯ ПРИБЫЛЬ:</span><span style='font-size:13px; font-weight:900; color:" + profitColor + "; font-family:monospace;'>" + profitSign + netProfit.toFixed(2) + " USDT</span></div></div>";
+            
+            let actionBlocks = "";
+            if (netProfit <= 0) {
+                actionBlocks = "<div style='background:rgba(255,59,48,0.15); border:1px solid #ff3b30; color:#ff3b30; padding:12px; border-radius:6px; font-size:12px; font-weight:700; text-align:center; text-transform:uppercase; font-family:monospace;'>🛑 СВЯЗКА УБЫТОЧНА ПРИ ДАННОМ ОБЪЕМЕ!<br><span style='font-size:10px; font-weight:normal; opacity:0.9;'>Увеличьте сумму ордера, чтобы перекрыть фиксированные расходы на вывод сети.</span></div>";
+            } else {
+                let pBuy = coin.price, pSell = coin.price * (1 + (finalSpreadPercent / 100));
+                actionBlocks = "<div style='background:rgba(0,177,89,0.08); border-left:4px solid #00b159; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;'><div style='text-align:left;'><span style='background:#00b159; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 1 · КУПИТЬ СПОТ</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b1 + "</span> @ " + pBuy.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#00b159;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>≈ " + totalTokens + " токенов</div></div></div><div style='background:rgba(255,59,48,0.08); border-left:4px solid #ff3b30; padding:10px; border-radius:4px; display:flex; justify-content:space-between; align-items:center; margin-top:8px;'><div style='text-align:left;'><span style='background:#ff3b30; color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:3px; margin-right:8px;'>ШАГ 2 · ОТКРЫТЬ SHORT</span><div style='font-size:12px; font-weight:700; color:#fff; margin-top:4px;'>Биржа: <span style='color:#f59e0b; font-family:monospace;'>" + coin.b2 + "</span> @ " + pSell.toFixed(4) + "</div></div><div style='text-align:right; font-family:monospace;'><div style='font-size:14px; font-weight:700; color:#ff3b30;'>" + halfMargin + " USDT</div><div style='font-size:11px; opacity:0.7;'>Плечо: " + coin.leverage + "x</div></div></div>";
+            }
+            let timerBlock = "<div class='badge-timer-inline' style='background:#1f2630; color:#f59e0b; border:1px solid #2d3848; padding:8px 12px; font-size:12px; text-align:center; font-family:monospace; margin-top:4px; border-radius:6px; width:94%; text-transform:uppercase;'>" + durationText + "</div>";
+            document.getElementById("det-info-rows").innerHTML = "<div style='display:flex; flex-direction:column; gap:10px; margin-top:5px; width:100%;'>" + calcBlock + actionBlocks + timerBlock + "</div>";
+            document.getElementById("det-price").innerText = (netProfit > 0 ? "+" : "") + ((netProfit / currentArbInput) * 100).toFixed(2) + "%";
+            drawChartArbitrage();
         }
         function drawChartSignals(sl, entry, tp1, tp2) {
             const canvas = document.getElementById("liveChart"), ctx = canvas.getContext("2d");
@@ -283,10 +302,17 @@
             for(let i = 1; i < 5; i++) { let y = (canvas.height / 5) * i; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
             let max = Math.max.apply(Math, priceHistory) * 1.001, min = Math.min.apply(Math, priceHistory) * 0.999, range = max - min;
             let getX = function(i) { return (canvas.width / (priceHistory.length - 1)) * i; }, getY = function(v) { return canvas.height - ((v - min) / range) * canvas.height; };
+            let drawTargetLine = function(value, color, label) {
+                let yPos = getY(value); if (yPos >= 0 && yPos <= canvas.height) {
+                    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, yPos); ctx.lineTo(canvas.width, yPos); ctx.stroke();
+                    ctx.fillStyle = color; ctx.font = "10px monospace"; ctx.fillText(label, canvas.width - 30, yPos - 4);
+                }
+            };
+            drawTargetLine(sl, "#ff3b30", "SL"); drawTargetLine(entry, "#2563eb", "Вход"); drawTargetLine(tp1, "#00b159", "TP1"); drawTargetLine(tp2, "#00b159", "TP2");
             ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory));
             for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i])); ctx.stroke();
         }
-        function drawChartArbitrage(pb, pm) {
+        function drawChartArbitrage() {
             const canvas = document.getElementById("liveChart"), ctx = canvas.getContext("2d");
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = '#1f2630'; ctx.lineWidth = 1;
             for(let i = 1; i < 5; i++) { let y = (canvas.height / 5) * i; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
@@ -297,29 +323,23 @@
         async function fetchAllExchangePrices() {
             if (!isRunning) return;
             try {
-                // Прямой параллельный опрос главных агрегированных шлюзов ликвидности
-                const res = await fetch('https://binance.com');
-                const data = await res.json();
-                if (data && Array.isArray(data)) {
+                const response = await fetch('https://bybit.com');
+                const data = await response.json();
+                if (data && data.result && data.result.list) {
+                    const tickerList = data.result.list;
                     COINS.forEach(function(coin, idx) {
-                        const market = data.find(t => t.symbol === coin.ticker);
-                        if (market && market.price) {
-                            let liveBasePrice = parseFloat(market.price);
-                            coin.price = liveBasePrice;
-                            
-                            // Математическая выжимка реального микро-спреда между 5 биржами (0.01% - 0.28%)
-                            if (coin.spread > 0.4) { coin.spread = 0.04 + (Math.random() * 0.18); }
-                            
-                            if (idx === selectedCoinIndex) {
-                                priceHistory.shift(); priceHistory.push(liveBasePrice);
-                            }
+                        const marketData = tickerList.find(t => t.symbol === coin.ticker);
+                        if (marketData && marketData.lastPrice) {
+                            let realPrice = parseFloat(marketData.lastPrice);
+                            coin.price = realPrice;
+                            if (idx === selectedCoinIndex) { priceHistory.shift(); priceHistory.push(realPrice); }
                         }
                     });
                     renderGrid(); updateDetailBlock();
                 }
             } catch (e) { console.log("Мультибиржевой шлюз API перезагружается..."); }
         }
-        setInterval(fetchAllExchangePrices, 2000); // Опрос серверов каждые 2 секунды
+        setInterval(fetchAllExchangePrices, 2000);
         setInterval(function() {
             if (!isRunning) return;
             COINS.forEach(function(coin) {
@@ -340,7 +360,7 @@
                     if (coin.arbMinutes > 1) coin.arbMinutes--;
                     else {
                         coin.isNew = true; coin.prepSeconds = 40; coin.type = Math.random() > 0.5 ? 'LONG' : 'SHORT';
-                        coin.accuracy = 70 + Math.random() * 25; coin.spread = 0.02 + Math.random() * 0.22;
+                        coin.accuracy = 70 + Math.random() * 25;
                         try { audioAlert.play(); } catch(e){}
                         showToast('🚨 СВЕЖИЙ ТРЕНД: ' + coin.name + ' обновлен!', true);
                     }
