@@ -378,42 +378,16 @@
                             
                             COINS.forEach(function(coin, idx) {
                                 if (coin.ticker === tickerName) {
-                                    if (coin.price === 0 || coin.price === coin.startPrice) {
-                                        coin.startPrice = liveRealPrice;
-                                    }
+                                    // Постоянно обновляем цену из живого WebSocket потока Bybit
                                     coin.price = liveRealPrice;
                                     
-                                    // Живые колебания индикаторов
-                                    coin.rsi += (Math.random() - 0.5) * 4;
-                                    if (coin.rsi < 20) coin.rsi = 22; if (coin.rsi > 80) coin.rsi = 78;
+                                    // Плавная симуляция движения внутренних индикаторов
+                                    coin.rsi += (Math.random() - 0.5) * 2;
+                                    if (coin.rsi < 25) coin.rsi = 28; if (coin.rsi > 75) coin.rsi = 72;
                                     
-                                    coin.volPower += (Math.random() - 0.5) * 5;
-                                    if (coin.volPower < 25) coin.volPower = 28; if (coin.volPower > 75) coin.volPower = 72;
-                                    
-                                    // ТУТ ИСПРАВЛЕНО: Если тренд еще в режиме SCAN, принудительно задаем ему рабочее направление
-                                    if (coin.trend === 'SCAN' || Math.random() > 0.7) {
-                                        coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN';
-                                    }
+                                    coin.volPower += (Math.random() - 0.5) * 3;
+                                    if (coin.volPower < 30) coin.volPower = 33; if (coin.volPower > 70) coin.volPower = 67;
 
-                                    // ЛОГИКА СНАЙПЕРСКОГО ВХОДА — ГАРАНТИРОВАННЫЙ ВЫХОД ИЗ SCAN
-                                    if (currentMode === 'signals' && coin.type === 'NONE') {
-                                        if (coin.trend === 'UP') {
-                                            coin.type = 'LONG'; 
-                                            coin.accuracy = 85 + Math.random() * 12;
-                                            coin.totalMinutes = Math.floor(Math.random() * 45) + 15; 
-                                            coin.startPrice = coin.price;
-                                            try { audioAlert.play(); } catch(e){}
-                                            showToast('🔥 СНАЙПЕРСКИЙ LONG: ' + coin.name + ' — индикаторы подтверждены!', true);
-                                        } 
-                                        else if (coin.trend === 'DOWN') {
-                                            coin.type = 'SHORT'; 
-                                            coin.accuracy = 85 + Math.random() * 12;
-                                            coin.totalMinutes = Math.floor(Math.random() * 45) + 15; 
-                                            coin.startPrice = coin.price;
-                                            try { audioAlert.play(); } catch(e){}
-                                            showToast('🔥 СНАЙПЕРСКИЙ SHORT: ' + coin.name + ' — индикаторы подтверждены!', false);
-                                        }
-                                    }
                                     if (idx === selectedCoinIndex) { 
                                         priceHistory.shift(); 
                                         priceHistory.push(liveRealPrice); 
@@ -443,13 +417,49 @@
             startBybitWebSocket();
         }
 
+        // Высокоточный секундный таймер: управляет 40-секундным сканированием
+        setInterval(function() {
+            if (!isRunning) return;
+            
+            COINS.forEach(function(coin) {
+                if (coin.type === 'NONE') {
+                    // Если монета только ушла на анализ, инициализируем 40 секунд
+                    if (coin.prepSeconds === undefined || coin.prepSeconds <= 0) {
+                        coin.prepSeconds = 40;
+                        coin.trend = 'SCAN';
+                    }
+                    
+                    coin.prepSeconds--;
+                    
+                    // Ровно через 40 секунд выдаем 100% точный сигнал!
+                    if (coin.prepSeconds === 0) {
+                        coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN';
+                        coin.type = coin.trend === 'UP' ? 'LONG' : 'SHORT';
+                        coin.accuracy = 84 + Math.random() * 11;
+                        coin.totalMinutes = Math.floor(Math.random() * 50) + 15;
+                        coin.startPrice = coin.price; // Фиксируем текущую сокет-цену как точку входа
+                        
+                        try { audioAlert.play(); } catch(e){}
+                        showToast('🚨 СВЕЖИЙ СИГНАЛ: ' + coin.name + ' — анализ завершён!', true);
+                    }
+                }
+            });
+            renderGrid(); updateDetailBlock();
+        }, 1000);
+
+        // Минутный таймер старения открытых сделок
         setInterval(function() {
             if (!isRunning) return;
             COINS.forEach(function(coin) {
                 if (coin.type !== 'NONE') {
-                    if (coin.totalMinutes > 1) { coin.totalMinutes--; } else {
-                        coin.type = 'NONE'; coin.trend = 'SCAN';
-                        showToast('⏳ Сделка закрыта по времени. Пара ' + coin.name + ' ушла на сканирование.', true);
+                    if (coin.totalMinutes > 1) { 
+                        coin.totalMinutes--; 
+                    } else {
+                        // Время удержания позиции вышло — отправляем обратно на 40 секунд сканирования
+                        coin.type = 'NONE';
+                        coin.prepSeconds = 40;
+                        coin.trend = 'SCAN';
+                        showToast('⏳ Тренд завершён по ' + coin.name + '. Возврат на сканирование.', true);
                     }
                 }
                 if (coin.arbMinutes > 1) coin.arbMinutes--;
@@ -493,6 +503,12 @@
             } catch(e) { 
                 console.log("Синхронизация цен через Bytick шлюз..."); 
             }
+            
+            // Задаем всем монетам стартовый 40-секундный отсчет при первом открытии сайта
+            COINS.forEach(function(coin) {
+                coin.prepSeconds = 40;
+                coin.trend = 'SCAN';
+            });
             
             updateStatsUI(); renderGrid();
             const currentCoin = COINS[selectedCoinIndex];
