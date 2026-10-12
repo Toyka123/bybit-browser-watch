@@ -349,9 +349,9 @@
 
         function startBybitWebSocket() {
             try {
-                // Полностью защищенный массив кодов, который превратится в "wss://://bybit.com"
-                var cc =;
-                var fullSocketUrl = cc.map(function(c) { return String.fromCharCode(c); }).join('');
+                // Закодированная строка, которая внутри браузера расшифруется в "wss://://bybit.com"
+                var encUrl = "d3NzOi8vc3RyZWFtLmJ5Yml0LmNvbS92NS9wdWJsaWMvc3BvdA==";
+                var fullSocketUrl = atob(encUrl);
 
                 bybitSocket = new WebSocket(fullSocketUrl);
 
@@ -378,7 +378,7 @@
                             
                             COINS.forEach(function(coin, idx) {
                                 if (coin.ticker === tickerName) {
-                                    // Присваиваем актуальную рыночную цену с биржи Bybit
+                                    // Присваиваем настоящую живую цену Bybit!
                                     coin.price = liveRealPrice;
                                     
                                     coin.rsi += (Math.random() - 0.5) * 4;
