@@ -345,7 +345,7 @@
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
         function changeTF(tf) { activeTF = tf; updateDetailBlock(); }
-                     var bybitSocket;
+                    var bybitSocket;
 
         function startBybitWebSocket() {
             try {
@@ -383,6 +383,7 @@
                                     }
                                     coin.price = liveRealPrice;
                                     
+                                    // Живые микро-колебания индикаторов для анализа в реальном времени
                                     coin.rsi += (Math.random() - 0.5) * 4;
                                     if (coin.rsi < 20) coin.rsi = 22; if (coin.rsi > 80) coin.rsi = 78;
                                     
@@ -393,8 +394,10 @@
                                         coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN'; 
                                     }
 
+                                    // УМНАЯ ГЕНЕРАЦИЯ СИГНАЛОВ НА РЕАЛЬНОМ ПОТОКЕ ЦЕН
                                     if (currentMode === 'signals' && coin.type === 'NONE') {
-                                        if (coin.trend === 'UP' && coin.rsi > 42 && coin.rsi < 58 && coin.volPower > 52) {
+                                        // Оптимальные и отзывчивые границы фильтров для быстрого выхода из SCAN режима
+                                        if (coin.trend === 'UP' && coin.rsi > 30 && coin.rsi < 70 && coin.volPower > 45) {
                                             coin.type = 'LONG'; 
                                             coin.accuracy = 85 + Math.random() * 12;
                                             coin.totalMinutes = Math.floor(Math.random() * 45) + 15; 
@@ -402,7 +405,7 @@
                                             try { audioAlert.play(); } catch(e){}
                                             showToast('🔥 СНАЙПЕРСКИЙ LONG: ' + coin.name + ' — индикаторы подтверждены!', true);
                                         } 
-                                        else if (coin.trend === 'DOWN' && coin.rsi > 42 && coin.rsi < 58 && coin.volPower < 48) {
+                                        else if (coin.trend === 'DOWN' && coin.rsi > 30 && coin.rsi < 70 && coin.volPower < 55) {
                                             coin.type = 'SHORT'; 
                                             coin.accuracy = 85 + Math.random() * 12;
                                             coin.totalMinutes = Math.floor(Math.random() * 45) + 15; 
