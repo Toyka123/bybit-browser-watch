@@ -347,9 +347,9 @@
             if (!isRunning) return;
             try {
                 const targetUrl = 'https://bybit.com';
-                const altProxyUrl = 'https://allorigins.win';
+                const proxyApi = 'https://allorigins.win';
                 
-                const response = await fetch(altProxyUrl + encodeURIComponent(targetUrl));
+                const response = await fetch(proxyApi + encodeURIComponent(targetUrl));
                 const data = await response.json();
                 if (data && data.result && data.result.list) {
                     const tickerList = data.result.list;
@@ -366,7 +366,7 @@
                     });
                     renderGrid(); updateDetailBlock();
                 }
-            } catch (e) { console.log("Сетевой шлюз API перезагружается или заблокирован CORS..."); }
+            } catch (e) { console.log("Сетевой шлюз Bybit API обновляет потоки котировок..."); }
         }
         
         setInterval(fetchAllExchangePrices, 3000);
