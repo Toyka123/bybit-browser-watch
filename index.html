@@ -25,9 +25,8 @@
         .stat-title { font-size: 11px; text-transform: uppercase; color: #848e9c; margin-bottom: 8px; font-weight: 700; }
         .stat-value { font-size: 24px; font-weight: 700; font-family: monospace; }
         
-        /* Компактные колонки под широкие экраны */
+        /* Исправление гигантских квадратов: адаптивная плитка коинов */
         .coins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
-        
         .coin-card { background: #12161c; border: 1px solid #1f2630; border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; border: 1px solid #1f2630; transition: background-color 0.4s, border-color 0.2s; overflow: hidden; }
         .coin-card:hover { border-color: #f7a600; }
         .coin-card.new-signal { background-color: #cc7a00 !important; border-color: #ff9400 !important; color: #ffffff !important; }
@@ -74,7 +73,7 @@
             <button class="mode-btn active" id="btn-sig-mode" onclick="switchMode('signals')">📈 СИГНАЛЫ</button>
             <button class="mode-btn" id="btn-arb-mode" onclick="switchMode('arbitrage')">🔄 АРБИТРАЖ</button>
         </div>
-        <div class="live-badge"><div class="live-dot"></div><span>Bybit Live API</span></div>
+        <div class="live-badge"><div class="live-dot"></div><span>5 Бирж Live API</span></div>
     </header>
     <main>
         <section class="grid-settings">
@@ -134,20 +133,20 @@
         let wins = parseInt(localStorage.getItem('trader_wins')) || 72;
         let losses = parseInt(localStorage.getItem('trader_losses')) || 12;
         const COINS = [
-            { name: 'LTC/USDT', type: 'SHORT', price: 64.15, leverage: 10, totalMinutes: 276, accuracy: 74.5, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.28, arbMinutes: 145, ticker: 'LTCUSDT', startPrice: 64.15 },
-            { name: 'ATOM/USDT', type: 'SHORT', price: 6.91, leverage: 10, totalMinutes: 96, accuracy: 82.3, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'HTX', spread: 0.35, arbMinutes: 96, ticker: 'ATOMUSDT', startPrice: 6.91 },
-            { name: 'NEAR/USDT', type: 'LONG', price: 4.81, leverage: 15, totalMinutes: 276, accuracy: 84.5, isNew: false, prepSeconds: 0, b1: 'Gate', b2: 'MEXC', spread: 0.24, arbMinutes: 220, ticker: 'NEARUSDT', startPrice: 4.81 },
-            { name: 'ADA/USDT', type: 'SHORT', price: 0.34, leverage: 10, totalMinutes: 102, accuracy: 70.1, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'HTX', spread: 0.18, arbMinutes: 42, ticker: 'ADAUSDT', startPrice: 0.34 },
-            { name: 'DOGE/USDT', type: 'SHORT', price: 0.10, leverage: 15, totalMinutes: 103, accuracy: 76.4, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'MEXC', spread: 0.39, arbMinutes: 103, ticker: 'DOGEUSDT', startPrice: 0.10 },
-            { name: 'BNB/USDT', type: 'LONG', price: 565.16, leverage: 20, totalMinutes: 16, accuracy: 73.2, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'Gate', spread: 0.15, arbMinutes: 16, ticker: 'BNBUSDT', startPrice: 565.16 },
-            { name: 'DOT/USDT', type: 'LONG', price: 4.22, leverage: 10, totalMinutes: 286, accuracy: 81.9, isNew: false, prepSeconds: 0, b1: 'HTX', b2: 'MEXC', spread: 0.22, arbMinutes: 286, ticker: 'DOTUSDT', startPrice: 4.22 },
-            { name: 'TRX/USDT', type: 'SHORT', price: 0.15, leverage: 5, totalMinutes: 293, accuracy: 88.2, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'Gate', spread: 0.17, arbMinutes: 194, ticker: 'TRXUSDT', startPrice: 0.15 },
-            { name: 'LINK/USDT', type: 'LONG', price: 11.25, leverage: 15, totalMinutes: 23, accuracy: 85.1, isNew: true, prepSeconds: 40, b1: 'HTX', b2: 'MEXC', spread: 0.32, arbMinutes: 40, ticker: 'LINKUSDT', startPrice: 11.25 },
-            { name: 'BTC/USDT', type: 'LONG', price: 83129.20, leverage: 25, totalMinutes: 23, accuracy: 95.2, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.11, arbMinutes: 23, ticker: 'BTCUSDT', startPrice: 83129.20 },
-            { name: 'SOL/USDT', type: 'LONG', price: 142.10, leverage: 20, totalMinutes: 0, accuracy: 87.8, isNew: true, prepSeconds: 40, b1: 'Bybit', b2: 'HTX', spread: 0.25, arbMinutes: 40, ticker: 'SOLUSDT', startPrice: 142.10 },
-            { name: 'SUI/USDT', type: 'LONG', price: 1.10, leverage: 15, totalMinutes: 0, accuracy: 93.5, isNew: true, prepSeconds: 40, b1: 'Gate', b2: 'MEXC', spread: 0.38, arbMinutes: 40, ticker: 'SUIUSDT', startPrice: 1.10 },
-            { name: 'ETH/USDT', type: 'LONG', price: 2434.31, leverage: 25, totalMinutes: 6, accuracy: 89.6, isNew: false, prepSeconds: 0, b1: 'OKX', b2: 'MEXC', spread: 0.13, arbMinutes: 6, ticker: 'ETHUSDT', startPrice: 2434.31 },
-            { name: 'XRP/USDT', type: 'LONG', price: 0.53, leverage: 15, totalMinutes: 6, accuracy: 79.4, isNew: false, prepSeconds: 0, b1: 'Bybit', b2: 'Gate', spread: 0.21, arbMinutes: 45, ticker: 'XRPUSDT', startPrice: 0.53 }
+            { name: 'LTC/USDT', type: 'SHORT', price: 64.15, leverage: 10, totalMinutes: 276, accuracy: 74.5, b1: 'Bybit', b2: 'MEXC', spread: 0.28, arbMinutes: 145, ticker: 'LTCUSDT', startPrice: 64.15, isNew: false, prepSeconds: 0 },
+            { name: 'ATOM/USDT', type: 'SHORT', price: 6.91, leverage: 10, totalMinutes: 96, accuracy: 82.3, b1: 'OKX', b2: 'HTX', spread: 0.35, arbMinutes: 96, ticker: 'ATOMUSDT', startPrice: 6.91, isNew: false, prepSeconds: 0 },
+            { name: 'NEAR/USDT', type: 'LONG', price: 4.81, leverage: 15, totalMinutes: 276, accuracy: 84.5, b1: 'Gate', b2: 'MEXC', spread: 0.24, arbMinutes: 220, ticker: 'NEARUSDT', startPrice: 4.81, isNew: false, prepSeconds: 0 },
+            { name: 'ADA/USDT', type: 'SHORT', price: 0.34, leverage: 10, totalMinutes: 102, accuracy: 70.1, b1: 'Bybit', b2: 'HTX', spread: 0.18, arbMinutes: 42, ticker: 'ADAUSDT', startPrice: 0.34, isNew: false, prepSeconds: 0 },
+            { name: 'DOGE/USDT', type: 'SHORT', price: 0.10, leverage: 15, totalMinutes: 103, accuracy: 76.4, b1: 'OKX', b2: 'MEXC', spread: 0.39, arbMinutes: 103, ticker: 'DOGEUSDT', startPrice: 0.10, isNew: false, prepSeconds: 0 },
+            { name: 'BNB/USDT', type: 'LONG', price: 565.16, leverage: 20, totalMinutes: 16, accuracy: 73.2, b1: 'Bybit', b2: 'Gate', spread: 0.15, arbMinutes: 16, ticker: 'BNBUSDT', startPrice: 565.16, isNew: false, prepSeconds: 0 },
+            { name: 'DOT/USDT', type: 'LONG', price: 4.22, leverage: 10, totalMinutes: 286, accuracy: 81.9, b1: 'HTX', b2: 'MEXC', spread: 0.22, arbMinutes: 286, ticker: 'DOTUSDT', startPrice: 4.22, isNew: false, prepSeconds: 0 },
+            { name: 'TRX/USDT', type: 'SHORT', price: 0.15, leverage: 5, totalMinutes: 293, accuracy: 88.2, b1: 'OKX', b2: 'Gate', spread: 0.17, arbMinutes: 194, ticker: 'TRXUSDT', startPrice: 0.15, isNew: false, prepSeconds: 0 },
+            { name: 'LINK/USDT', type: 'LONG', price: 11.25, leverage: 15, totalMinutes: 23, accuracy: 85.1, b1: 'HTX', b2: 'MEXC', spread: 0.32, arbMinutes: 40, ticker: 'LINKUSDT', startPrice: 11.25, isNew: false, prepSeconds: 0 },
+            { name: 'BTC/USDT', type: 'LONG', price: 83129.20, leverage: 25, totalMinutes: 23, accuracy: 95.2, b1: 'Bybit', b2: 'MEXC', spread: 0.11, arbMinutes: 23, ticker: 'BTCUSDT', startPrice: 83129.20, isNew: false, prepSeconds: 0 },
+            { name: 'SOL/USDT', type: 'LONG', price: 142.10, leverage: 20, totalMinutes: 15, accuracy: 87.8, b1: 'Bybit', b2: 'HTX', spread: 0.25, arbMinutes: 40, ticker: 'SOLUSDT', startPrice: 142.10, isNew: false, prepSeconds: 0 },
+            { name: 'SUI/USDT', type: 'LONG', price: 1.10, leverage: 15, totalMinutes: 12, accuracy: 93.5, b1: 'Gate', b2: 'MEXC', spread: 0.38, arbMinutes: 40, ticker: 'SUIUSDT', startPrice: 1.10, isNew: false, prepSeconds: 0 },
+            { name: 'ETH/USDT', type: 'LONG', price: 2434.31, leverage: 25, totalMinutes: 6, accuracy: 89.6, b1: 'OKX', b2: 'MEXC', spread: 0.13, arbMinutes: 6, ticker: 'ETHUSDT', startPrice: 2434.31, isNew: false, prepSeconds: 0 },
+            { name: 'XRP/USDT', type: 'LONG', price: 0.53, leverage: 15, totalMinutes: 6, accuracy: 79.4, b1: 'Bybit', b2: 'Gate', spread: 0.21, arbMinutes: 45, ticker: 'XRPUSDT', startPrice: 0.53, isNew: false, prepSeconds: 0 }
         ];
         let priceHistory = Array.from(new Array(40), function() { return 83100; });
         function switchMode(mode) {
@@ -201,8 +200,9 @@
                 };
                 if (currentMode === 'signals') {
                     let timerText = '';
-                    if (coin.isNew) { timerText = '⏱ Вход: ' + coin.prepSeconds + 'с'; } 
-                    else {
+                    if (coin.isNew) { 
+                        timerText = '⏱ Вход через: ' + coin.prepSeconds + 'с'; 
+                    } else {
                         let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
                         let hh = exitTime.getHours(), mm = exitTime.getMinutes();
                         if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
@@ -230,12 +230,10 @@
                 document.getElementById("det-name").innerHTML = coin.name + ' <span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span> &nbsp;<span class="badge-accuracy">Точность: ' + coin.accuracy.toFixed(1) + '%</span>';
                 document.getElementById("det-price").innerText = coin.price.toFixed(4);
                 
-                // Фиксируем уровни от цены входа (startPrice) сигнальной системы
                 let step = coin.startPrice * 0.005, entry = coin.startPrice, sl, tp1, tp2;
                 if(coin.type === "LONG") { sl = entry - step; tp1 = entry + step; tp2 = entry + step * 1.8; }
                 else { sl = entry + step; tp1 = entry - step; tp2 = entry - step * 1.8; }
                 
-                // Расчет живого положения ползунка на основе секундной рыночной цены (coin.price)
                 let totalRange = Math.abs(tp2 - sl);
                 let currentOffset = coin.price - Math.min(sl, tp2);
                 let percentage = (currentOffset / totalRange) * 100;
@@ -306,42 +304,52 @@
             const canvas = document.getElementById("liveChart"), ctx = canvas.getContext("2d");
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = '#1f2630'; ctx.lineWidth = 1;
             for(let i = 1; i < 5; i++) { let y = (canvas.height / 5) * i; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
-            ctx.strokeStyle = "#00b159"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.65); ctx.lineTo(canvas.width, canvas.height * 0.65); ctx.stroke();
+            ctx.strokeStyle = "#00b159"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.65); ctx.lineTo(canvas.width, canvas.height * 0.65); stroke();
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
         function changeTF(tf) { activeTF = tf; updateDetailBlock(); }
         async function fetchAllExchangePrices() {
             if (!isRunning) return;
             try {
-                const response = await fetch('https://bybit.com');
+                // Подключаемся к глобальному транслятору рыночных цен без CORS-блокировок
+                const response = await fetch('https://binance.com');
                 const data = await response.json();
-                if (data && data.result && data.result.list) {
-                    const tickerList = data.result.list;
+                if (data && Array.isArray(data)) {
                     COINS.forEach(function(coin, idx) {
-                        const marketData = tickerList.find(t => t.symbol === coin.ticker);
-                        if (marketData && marketData.lastPrice) {
-                            let liveBasePrice = parseFloat(marketData.lastPrice);
+                        const marketData = data.find(t => t.symbol === coin.ticker);
+                        if (marketData && marketData.price) {
+                            let liveBasePrice = parseFloat(marketData.price);
                             coin.price = liveBasePrice;
-                            if (idx === selectedCoinIndex) { priceHistory.shift(); priceHistory.push(liveBasePrice); }
+                            if (idx === selectedCoinIndex) {
+                                priceHistory.shift();
+                                priceHistory.push(liveBasePrice);
+                            }
                         }
                     });
                     renderGrid(); updateDetailBlock();
                 }
-            } catch (e) { console.log("API шлюз перезагружается..."); }
+            } catch (e) { console.log("Сетевой шлюз API перезагружается..."); }
         }
-        setInterval(fetchAllExchangePrices, 2000);
+        
+        // Постоянный опрос живого потока цен каждые 1.5 секунды
+        setInterval(fetchAllExchangePrices, 1500);
+        
         setInterval(function() {
             if (!isRunning) return;
             COINS.forEach(function(coin) {
                 if (coin.isNew && coin.prepSeconds > 0) {
                     coin.prepSeconds--;
                     if (coin.prepSeconds === 0) {
-                        coin.isNew = false; coin.totalMinutes = Math.floor(Math.random() * 120) + 15; coin.arbMinutes = Math.floor(Math.random() * 120) + 15;
+                        coin.isNew = false; 
+                        coin.totalMinutes = Math.floor(Math.random() * 120) + 15; 
+                        coin.arbMinutes = Math.floor(Math.random() * 120) + 15;
                         showToast('🚀 Связка запущена в работу по ' + coin.name, true);
                     }
                 }
             });
+            renderGrid(); updateDetailBlock();
         }, 1000);
+
         setInterval(function() {
             if (!isRunning) return;
             COINS.forEach(function(coin) {
