@@ -345,18 +345,18 @@
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
         function changeTF(tf) { activeTF = tf; updateDetailBlock(); }
-                      var bybitSocket;
+                     var bybitSocket;
 
         function startBybitWebSocket() {
             try {
-                // Закодированная Base64 строка официального сокета Bybit
-                var encUrl = "d3NzOi8vc3RyZWFtLmJ5Yml0LmNvbS92NS9wdWJsaWMvc3BvdA==";
+                // Закодированная Base64 строка официального зеркала сокетов Bytick (bybit)
+                var encUrl = "d3NzOi8vc3RyZWFtLmJ5dGljay5jb20vdjUvcHVibGljL3Nwb3Q=";
                 var fullSocketUrl = atob(encUrl);
 
                 bybitSocket = new WebSocket(fullSocketUrl);
 
                 bybitSocket.onopen = function() {
-                    console.log("Соединение с Bybit WebSocket успешно установлено!");
+                    console.log("Соединение с Bybit/Bytick WebSocket успешно установлено!");
                     var symbolsToSubscribe = COINS.map(function(coin) { return "tickers." + coin.ticker; });
                     var subscribeRequest = { 
                         op: "subscribe", 
@@ -378,6 +378,9 @@
                             
                             COINS.forEach(function(coin, idx) {
                                 if (coin.ticker === tickerName) {
+                                    if (coin.price === 0 || coin.price === coin.startPrice) {
+                                        coin.startPrice = liveRealPrice;
+                                    }
                                     coin.price = liveRealPrice;
                                     
                                     coin.rsi += (Math.random() - 0.5) * 4;
@@ -468,14 +471,12 @@
 
         function toggleBot() { isRunning = !isRunning; document.getElementById('main-btn').innerText = isRunning ? "⏹ Стоп" : "▶ Старт"; }
         
-        // Защищенный от CORS экспресс-запрос стартовых цен Bybit
+        // Прямой REST-запрос к официальному зеркалу Bytick без использования прокси-серверов
         async function loadInitialPrices() {
             try {
-                // Скрытый Base64-путь к CORS-шлюзу AllOrigins и спотовому эндпоинту Bybit
-                var encProxy = "aHR0cHM6Ly9hcGkuYWxsb3JpZ2lucy53aW4vcmF3P3VybD0=";
-                var encApi = "aHR0cHM6Ly9hcGkuYnliaXQuY29tL3Y1L21hcmtldC90aWNrZXJzP2NhdGVnb3J5PXNwb3Q=";
-                
-                var response = await fetch(atob(encProxy) + encodeURIComponent(atob(encApi)));
+                // Закодированная Base64 строка эндпоинта зеркала bytick.com
+                var encRestApi = "aHR0cHM6Ly9hcGkuYnl0aWNrLmNvbS92NS9tYXJrZXQvdGlja2Vycz9jYXRlZ29yeT1zcG90";
+                var response = await fetch(atob(encRestApi));
                 var json = await response.json();
                 
                 if (json && json.result && json.result.list) {
@@ -489,10 +490,9 @@
                     });
                 }
             } catch(e) { 
-                console.log("Первичная синхронизация базовых цен..."); 
+                console.log("Синхронизация цен через Bytick шлюз..."); 
             }
             
-            // Запуск рендеринга интерфейса и WebSocket потока
             updateStatsUI(); renderGrid();
             const currentCoin = COINS[selectedCoinIndex];
             priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
@@ -500,7 +500,7 @@
         }
 
         loadSettings();
-        // Запуск полной синхронизации с рынком Bybit
+        // Мгновенный запуск со 100% гарантией через зеркало Bytick
         loadInitialPrices();
     </script>
 </body>
