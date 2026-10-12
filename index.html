@@ -78,7 +78,7 @@
     <main>
         <section class="grid-settings">
             <div class="form-group"><label>Депозит, $</label><input type="number" id="input-deposit" oninput="saveSettings()" value="1000"></div>
-            <div class="form-group"><label>Риск, %</label><input type="number" id="input-risk" oninput="saveSettings()" value="1"></div>
+            <div class="form-group"><label>Risk, %</label><input type="number" id="input-risk" oninput="saveSettings()" value="1"></div>
             <div class="form-group"><label>EMA 1</label><input type="number" value="9"></div>
             <div class="form-group"><label>EMA 2</label><input type="number" value="21"></div>
             <div class="form-group"><label>Мониторинг</label><div class="badge-active">Работает</div></div>
@@ -211,7 +211,7 @@
                     card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:' + (coin.isNew ? '#fff' : (coin.type==='LONG'?'#00b159':'#ff3b30')) + '">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.8; white-space:nowrap;">' + timerText + '</div>';
                 } else {
                     let timerText = coin.isNew ? '⏱ Окно: ' + coin.prepSeconds + 'с' : '⏱ Спред: ' + formatMinutesToTime(coin.arbMinutes);
-                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:4px;"><span class="badge-spread">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(2) + '%</span></div></div><div class="coin-price" style="color:#f59e0b;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
+                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(2) + '%</span></div></div><div class="coin-price" style="color:#f59e0b;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
                 }
                 container.appendChild(card);
             });
@@ -244,6 +244,7 @@
                 let hh = exitTime.getHours(), mm = exitTime.getMinutes();
                 if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
                 let durationText = coin.isNew ? "ВХОД ЧЕРЕЗ: " + coin.prepSeconds + "с" : "Активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.totalMinutes) + ")";
+                document.getElementById("det-info-rows").innerHTML = "• Живой Трекинг Целей Bybit API<br>• Маржа ордера: " + marginUsdt + " USDT (Объём: " + totalVolumeUsdt + " $)<br>• Выбранное ботом плечо: " + coin.leverage + "x<br>⏱ " + durationText;
                 document.getElementById("det-info-rows").innerHTML = "• Живой Трекинг Целей Bybit API<br>• Маржа ордера: " + marginUsdt + " USDT (Объём: " + totalVolumeUsdt + " $)<br>• Выбранное ботом плечо: " + coin.leverage + "x<br>⏱ " + durationText;
                 document.getElementById("lbl-sl").innerText = sl.toFixed(4); document.getElementById("lbl-entry").innerText = entry.toFixed(4);
                 document.getElementById("lbl-tp1").innerText = tp1.toFixed(4); document.getElementById("lbl-tp2").innerText = tp2.toFixed(4);
@@ -297,6 +298,13 @@
             for(let i = 1; i < 5; i++) { let y = (canvas.height / 5) * i; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
             let max = Math.max.apply(Math, priceHistory) * 1.001, min = Math.min.apply(Math, priceHistory) * 0.999, range = max - min;
             let getX = function(i) { return (canvas.width / (priceHistory.length - 1)) * i; }, getY = function(v) { return canvas.height - ((v - min) / range) * canvas.height; };
+            let drawTargetLine = function(value, color, label) {
+                let yPos = getY(value); if (yPos >= 0 && yPos <= canvas.height) {
+                    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, yPos); ctx.lineTo(canvas.width, yPos); ctx.stroke();
+                    ctx.fillStyle = color; ctx.font = "10px monospace"; ctx.fillText(label, canvas.width - 30, yPos - 4);
+                }
+            };
+            drawTargetLine(sl, "#ff3b30", "SL"); drawTargetLine(entry, "#2563eb", "Вход"); drawTargetLine(tp1, "#00b159", "TP1"); drawTargetLine(tp2, "#00b159", "TP2");
             ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory));
             for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i])); ctx.stroke();
         }
@@ -304,21 +312,22 @@
             const canvas = document.getElementById("liveChart"), ctx = canvas.getContext("2d");
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = '#1f2630'; ctx.lineWidth = 1;
             for(let i = 1; i < 5; i++) { let y = (canvas.height / 5) * i; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
-            ctx.strokeStyle = "#00b159"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.65); ctx.lineTo(canvas.width, canvas.height * 0.65); stroke();
+            ctx.strokeStyle = "#00b159"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.65); ctx.lineTo(canvas.width, canvas.height * 0.65); ctx.stroke();
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
         function changeTF(tf) { activeTF = tf; updateDetailBlock(); }
         async function fetchAllExchangePrices() {
             if (!isRunning) return;
             try {
-                // Подключаемся к глобальному транслятору рыночных цен без CORS-блокировок
-                const response = await fetch('https://binance.com');
+                // Подключаемся к официальному зеркалу публичного API Bybit V5
+                const response = await fetch('https://bybit.com');
                 const data = await response.json();
-                if (data && Array.isArray(data)) {
+                if (data && data.result && data.result.list) {
+                    const tickerList = data.result.list;
                     COINS.forEach(function(coin, idx) {
-                        const marketData = data.find(t => t.symbol === coin.ticker);
-                        if (marketData && marketData.price) {
-                            let liveBasePrice = parseFloat(marketData.price);
+                        const marketData = tickerList.find(t => t.symbol === coin.ticker);
+                        if (marketData && marketData.lastPrice) {
+                            let liveBasePrice = parseFloat(marketData.lastPrice);
                             coin.price = liveBasePrice;
                             if (idx === selectedCoinIndex) {
                                 priceHistory.shift();
@@ -331,7 +340,6 @@
             } catch (e) { console.log("Сетевой шлюз API перезагружается..."); }
         }
         
-        // Постоянный опрос живого потока цен каждые 1.5 секунды
         setInterval(fetchAllExchangePrices, 1500);
         
         setInterval(function() {
