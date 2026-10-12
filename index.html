@@ -345,11 +345,11 @@
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
         function changeTF(tf) { activeTF = tf; updateDetailBlock(); }
-               var bybitSocket;
+              var bybitSocket;
 
         function startBybitWebSocket() {
             try {
-                // Закодированная строка, которая внутри браузера расшифруется в wss-ссылку Bybit
+                // Закодированная Base64 строка официального сокета Bybit
                 var encUrl = "d3NzOi8vc3RyZWFtLmJ5Yml0LmNvbS92NS9wdWJsaWMvc3BvdA==";
                 var fullSocketUrl = atob(encUrl);
 
@@ -373,12 +373,18 @@
                         var tickerName = msg.topic.replace("tickers.", "");
                         var marketData = msg.data;
                         
+                        // Bybit передает текущую цену в поле lastPrice при первом снимке или при обновлении тика
                         if (marketData.lastPrice) {
                             var liveRealPrice = parseFloat(marketData.lastPrice);
                             
                             COINS.forEach(function(coin, idx) {
                                 if (coin.ticker === tickerName) {
-                                    // Присваиваем актуальную рыночную цену с биржи Bybit
+                                    // Проверяем, если цена монеты дефолтная из памяти — плавно выравниваем график
+                                    if (coin.price === coin.startPrice && coin.startPrice !== liveRealPrice) {
+                                        coin.startPrice = liveRealPrice;
+                                    }
+                                    
+                                    // Перезаписываем цену на НАСТОЯЩУЮ рыночную с Bybit
                                     coin.price = liveRealPrice;
                                     
                                     coin.rsi += (Math.random() - 0.5) * 4;
@@ -469,35 +475,13 @@
 
         function toggleBot() { isRunning = !isRunning; document.getElementById('main-btn').innerText = isRunning ? "⏹ Стоп" : "▶ Старт"; }
         
-        // Быстрый REST-запрос актуальных котировок при открытии страницы
-        async function loadInitialPrices() {
-            try {
-                var response = await fetch("https://bybit.com");
-                var json = await response.json();
-                if (json && json.result && json.result.list) {
-                    var list = json.result.list;
-                    COINS.forEach(function(coin) {
-                        var market = list.find(function(t) { return t.symbol === coin.ticker; });
-                        if (market && market.lastPrice) {
-                            coin.price = parseFloat(market.lastPrice);
-                            coin.startPrice = coin.price;
-                        }
-                    });
-                }
-            } catch(e) { 
-                console.log("Первичный срез цен Bybit загружен..."); 
-            }
-            
-            // Отрисовываем интерфейс на основе реальных цен и включаем WebSocket-поток
-            updateStatsUI(); renderGrid();
-            const currentCoin = COINS[selectedCoinIndex];
-            priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
-            updateDetailBlock(); startBybitWebSocket();
-        }
-
-        loadSettings();
-        // Запуск полной синхронизации
-        loadInitialPrices();
+        loadSettings(); updateStatsUI(); renderGrid();
+        const currentCoin = COINS[selectedCoinIndex];
+        priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
+        updateDetailBlock(); 
+        
+        // Запускаем прямое сокет-подключение, которое само заполнит реальные цены рынка
+        fetchAllExchangePrices();
     </script>
 </body>
 </html>
