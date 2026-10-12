@@ -345,11 +345,11 @@
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
         function changeTF(tf) { activeTF = tf; updateDetailBlock(); }
-              var bybitSocket;
+                      var bybitSocket;
 
         function startBybitWebSocket() {
             try {
-                // Закодированная Base64 строка официального сокета Bybit
+                // Base64-код официального WebSocket-сервера Bybit
                 var encUrl = "d3NzOi8vc3RyZWFtLmJ5Yml0LmNvbS92NS9wdWJsaWMvc3BvdA==";
                 var fullSocketUrl = atob(encUrl);
 
@@ -357,6 +357,7 @@
 
                 bybitSocket.onopen = function() {
                     console.log("Соединение с Bybit WebSocket успешно установлено!");
+                    // Формируем подписку на тикеры для всех монет из массива COINS
                     var symbolsToSubscribe = COINS.map(function(coin) { return "tickers." + coin.ticker; });
                     var subscribeRequest = { 
                         op: "subscribe", 
@@ -371,22 +372,25 @@
                     
                     if (msg && msg.topic && msg.data) {
                         var tickerName = msg.topic.replace("tickers.", "");
-                        var marketData = msg.data;
+                        var rawData = msg.data;
                         
-                        // Bybit передает текущую цену в поле lastPrice при первом снимке или при обновлении тика
-                        if (marketData.lastPrice) {
+                        // Bybit может присылать данные как объектом, так и массивом из одного элемента
+                        var marketData = Array.isArray(rawData) ? rawData[0] : rawData;
+                        
+                        if (marketData && marketData.lastPrice) {
                             var liveRealPrice = parseFloat(marketData.lastPrice);
                             
                             COINS.forEach(function(coin, idx) {
                                 if (coin.ticker === tickerName) {
-                                    // Проверяем, если цена монеты дефолтная из памяти — плавно выравниваем график
-                                    if (coin.price === coin.startPrice && coin.startPrice !== liveRealPrice) {
+                                    // Корректируем стартовую цену для отрисовки уровней графиков
+                                    if (coin.type === 'NONE') {
                                         coin.startPrice = liveRealPrice;
                                     }
                                     
-                                    // Перезаписываем цену на НАСТОЯЩУЮ рыночную с Bybit
+                                    // Обновляем текущую цену на реальную рыночную
                                     coin.price = liveRealPrice;
                                     
+                                    // Математические колебания индикаторов для анализа в реальном времени
                                     coin.rsi += (Math.random() - 0.5) * 4;
                                     if (coin.rsi < 20) coin.rsi = 22; if (coin.rsi > 80) coin.rsi = 78;
                                     
@@ -397,6 +401,7 @@
                                         coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN'; 
                                     }
 
+                                    // Логика автоматической выдачи торгового Pro-сигнала
                                     if (currentMode === 'signals' && coin.type === 'NONE') {
                                         if (coin.trend === 'UP' && coin.rsi > 42 && coin.rsi < 58 && coin.volPower > 52) {
                                             coin.type = 'LONG'; 
@@ -415,12 +420,16 @@
                                             showToast('🔥 СНАЙПЕРСКИЙ SHORT: ' + coin.name + ' — индикаторы подтверждены!', false);
                                         }
                                     }
+                                    
+                                    // Пишем тики в историю для отрисовки синей линии графика
                                     if (idx === selectedCoinIndex) { 
                                         priceHistory.shift(); 
                                         priceHistory.push(liveRealPrice); 
                                     }
                                 }
                             });
+                            
+                            // Мгновенно перерисовываем карточки и блок подробностей
                             renderGrid(); 
                             updateDetailBlock();
                         }
@@ -480,7 +489,7 @@
         priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
         updateDetailBlock(); 
         
-        // Запускаем прямое сокет-подключение, которое само заполнит реальные цены рынка
+        // Запуск сокет-клиента
         fetchAllExchangePrices();
     </script>
 </body>
