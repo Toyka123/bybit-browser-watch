@@ -323,7 +323,7 @@
             ctx.strokeStyle = "#00b159"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.65); ctx.lineTo(canvas.width, canvas.height * 0.65); ctx.stroke();
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
-        var bybitSocket;
+               var bybitSocket;
         function startBybitWebSocket() {
             try {
                 var encUrl = "d3NzOi8vc3RyZWFtLmJ5dGljay5jb20vdjUvcHVibGljL3Nwb3Q=";
@@ -344,18 +344,23 @@
                             var marketPrice = parseFloat(rawPrice);
                             var marketNoise = (Math.random() - 0.5) * (marketPrice * 0.0001);
                             var liveRealPrice = marketPrice + marketNoise;
+                            
                             COINS.forEach(function(coin, idx) {
                                 if (coin.ticker === tickerName) {
                                     coin.price = liveRealPrice;
+                                    
+                                    // ТУТ ИСПРАВЛЕНО: Сравниваем первый элемент массива, чтобы код сокета не зависал
                                     if (idx === selectedCoinIndex) {
-                                        if (priceHistory > liveRealPrice * 1.5 || priceHistory < liveRealPrice / 1.5) {
+                                        if (priceHistory[0] > liveRealPrice * 2 || priceHistory[0] < liveRealPrice / 2) {
                                             priceHistory = Array.from(new Array(40), function() { return liveRealPrice; });
                                         }
-                                        priceHistory.shift(); priceHistory.push(liveRealPrice);
+                                        priceHistory.shift(); 
+                                        priceHistory.push(liveRealPrice);
                                     }
                                 }
                             });
-                            renderGrid(); updateDetailBlock();
+                            renderGrid(); 
+                            updateDetailBlock();
                         }
                     }
                 };
