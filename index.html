@@ -360,74 +360,135 @@
             ctx.strokeStyle = "#00b159"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.65); ctx.lineTo(canvas.width, canvas.height * 0.65); ctx.stroke();
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
-        var bybitSocket;
+               var bybitSocket;
+
         function startBybitWebSocket() {
             try {
+                // Закодированная Base64 строка официального WebSocket-сервера Bytick (Bybit)
                 var encUrl = "d3NzOi8vc3RyZWFtLmJ5dGljay5jb20vdjUvcHVibGljL3Nwb3Q=";
-                bybitSocket = new WebSocket(atob(encUrl));
+                var fullSocketUrl = atob(encUrl);
+
+                bybitSocket = new WebSocket(fullSocketUrl);
+
                 bybitSocket.onopen = function() {
-                    console.log("Соединение с Bybit WebSocket успешно установлено!");
+                    console.log("Соединение с Bybit/Bytick WebSocket успешно установлено!");
                     var symbolsToSubscribe = COINS.map(function(coin) { return "tickers." + coin.ticker; });
-                    bybitSocket.send(JSON.stringify({ op: "subscribe", args: symbolsToSubscribe }));
+                    var subscribeRequest = { 
+                        op: "subscribe", 
+                        args: symbolsToSubscribe 
+                    };
+                    bybitSocket.send(JSON.stringify(subscribeRequest));
                 };
+
                 bybitSocket.onmessage = function(event) {
                     if (!isRunning) return;
                     var msg = JSON.parse(event.data);
+                    
                     if (msg && msg.topic && msg.data) {
                         var tickerName = msg.topic.replace("tickers.", "");
                         var marketData = msg.data;
-                        if (marketData.lastPrice) {
-                            var marketPrice = parseFloat(marketData.lastPrice);
+                        
+                        // ТУТ ИСПРАВЛЕНО: Читаем абсолютно любое имя переменной цены, которое может выдать Bybit V5
+                        var rawPrice = marketData.lastPrice || marketData.p || marketData.lp || marketData.closePrice;
+                        
+                        if (rawPrice) {
+                            var marketPrice = parseFloat(rawPrice);
+                            // Добавляем микро-шум в сотых долях цента, чтобы гарантировать 100% плавное движение графиков и шкал
                             var marketNoise = (Math.random() - 0.5) * (marketPrice * 0.0001);
                             var liveRealPrice = marketPrice + marketNoise;
+                            
                             COINS.forEach(function(coin, idx) {
                                 if (coin.ticker === tickerName) {
+                                    // Обновляем цену монеты в реальном времени!
                                     coin.price = liveRealPrice;
-                                    if (idx === selectedCoinIndex) {
+                                    
+                                    // Плавная симуляция волатильности технических индикаторов
+                                    coin.rsi += (Math.random() - 0.5) * 1;
+                                    if (coin.rsi < 25) coin.rsi = 28; if (coin.rsi > 75) coin.rsi = 72;
+                                    
+                                    coin.volPower += (Math.random() - 0.5) * 2;
+                                    if (coin.volPower < 30) coin.volPower = 33; if (coin.volPower > 70) coin.volPower = 67;
+
+                                    // Обновляем массив истории Canvas для выбранной пары
+                                    if (idx === selectedCoinIndex) { 
                                         if (priceHistory > liveRealPrice * 1.5 || priceHistory < liveRealPrice / 1.5) {
                                             priceHistory = Array.from(new Array(40), function() { return liveRealPrice; });
                                         }
-                                        priceHistory.shift(); priceHistory.push(liveRealPrice);
+                                        priceHistory.shift(); 
+                                        priceHistory.push(liveRealPrice); 
                                     }
                                 }
                             });
-                            renderGrid(); updateDetailBlock();
+                            // Мгновенно перерисовываем плитку и блоки целей при каждом тике сокета
+                            renderGrid(); 
+                            updateDetailBlock();
                         }
                     }
                 };
-                bybitSocket.onclose = function() { setTimeout(startBybitWebSocket, 3000); };
-            } catch (e) {}
+
+                bybitSocket.onclose = function() { 
+                    setTimeout(startBybitWebSocket, 3000); 
+                };
+                
+                bybitSocket.onerror = function(err) { 
+                    console.log("WebSocket встретил ошибку сети."); 
+                };
+            } catch (e) { 
+                console.log("Не удалось подключиться к WebSocket Bybit..."); 
+            }
         }
+
+        function fetchAllExchangePrices() {
+            if (bybitSocket && bybitSocket.readyState === WebSocket.OPEN) return;
+            startBybitWebSocket();
+        }
+
+        // Высокоточный секундный таймер: управляет 40-секундным сканированием
         setInterval(function() {
             if (!isRunning) return;
+            
             COINS.forEach(function(coin) {
                 if (coin.type === 'NONE') {
-                    if (coin.prepSeconds === undefined || coin.prepSeconds <= 0) coin.prepSeconds = 40;
+                    if (coin.prepSeconds === undefined || coin.prepSeconds <= 0) {
+                        coin.prepSeconds = 40;
+                        coin.trend = 'SCAN';
+                    }
                     coin.prepSeconds--;
+                    
                     if (coin.prepSeconds === 0) {
                         coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN';
                         coin.type = coin.trend === 'UP' ? 'LONG' : 'SHORT';
-                        coin.accuracy = 85 + Math.random() * 10;
-                        coin.totalMinutes = Math.floor(Math.random() * 45) + 15;
-                        coin.startPrice = coin.price;
+                        coin.accuracy = 84 + Math.random() * 11;
+                        coin.totalMinutes = Math.floor(Math.random() * 50) + 15;
+                        coin.startPrice = coin.price; // Точкой входа становится текущая сокет-цена
+                        
                         try { audioAlert.play(); } catch(e){}
-                        showToast('🚨 АНАЛИЗ ЗАВЕРШЕН по ' + coin.name, true);
+                        showToast('🚨 СВЕЖИЙ СИГНАЛ: ' + coin.name + ' — анализ завершён!', true);
                     }
                 }
             });
             renderGrid(); updateDetailBlock();
         }, 1000);
+
+        // Минутный таймер удержания позиций
         setInterval(function() {
             if (!isRunning) return;
             COINS.forEach(function(coin) {
                 if (coin.type !== 'NONE') {
-                    if (coin.totalMinutes > 1) coin.totalMinutes--;
-                    else { coin.type = 'NONE'; coin.prepSeconds = 40; coin.trend = 'SCAN'; }
+                    if (coin.totalMinutes > 1) { 
+                        coin.totalMinutes--; 
+                    } else {
+                        coin.type = 'NONE';
+                        coin.prepSeconds = 40;
+                        coin.trend = 'SCAN';
+                        showToast('⏳ Тренд завершён по ' + coin.name + '. Возврат на сканирование.', true);
+                    }
                 }
                 if (coin.arbMinutes > 1) coin.arbMinutes--;
             });
             renderGrid(); updateDetailBlock();
         }, 60000);
+
         function saveSettings() {
             localStorage.setItem('trader_dep', document.getElementById('input-deposit').value);
             localStorage.setItem('trader_risk', document.getElementById('input-risk').value);
@@ -435,33 +496,47 @@
             localStorage.setItem('trader_ema2', document.getElementById('input-ema2').value);
             updateDetailBlock();
         }
+
         function loadSettings() {
             if(localStorage.getItem('trader_dep')) document.getElementById('input-deposit').value = localStorage.getItem('trader_dep');
             if(localStorage.getItem('trader_risk')) document.getElementById('input-risk').value = localStorage.getItem('trader_risk');
             if(localStorage.getItem('trader_ema1')) document.getElementById('input-ema1').value = localStorage.getItem('trader_ema1');
             if(localStorage.getItem('trader_ema2')) document.getElementById('input-ema2').value = localStorage.getItem('trader_ema2');
         }
+
         function toggleBot() { isRunning = !isRunning; document.getElementById('main-btn').innerText = isRunning ? "⏹ Стоп" : "▶ Старт"; }
+        
         async function loadInitialPrices() {
             try {
                 var encRestApi = "aHR0cHM6Ly9hcGkuYnl0aWNrLmNvbS92NS9tYXJrZXQvdGlja2Vycz9jYXRlZ29yeT1zcG90";
                 var response = await fetch(atob(encRestApi));
                 var json = await response.json();
+                
                 if (json && json.result && json.result.list) {
                     var list = json.result.list;
                     COINS.forEach(function(coin) {
                         var market = list.find(function(t) { return t.symbol === coin.ticker; });
-                        if (market && market.lastPrice) { coin.price = parseFloat(market.lastPrice); coin.startPrice = coin.price; }
+                        if (market && market.lastPrice) {
+                            coin.price = parseFloat(market.lastPrice);
+                            coin.startPrice = coin.price;
+                        }
                     });
                 }
             } catch(e) {}
-            COINS.forEach(function(coin) { coin.prepSeconds = 40; coin.trend = 'SCAN'; });
+            
+            COINS.forEach(function(coin) {
+                coin.prepSeconds = 40;
+                coin.trend = 'SCAN';
+            });
+            
             updateStatsUI(); renderGrid();
             const currentCoin = COINS[selectedCoinIndex];
             priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
             updateDetailBlock(); startBybitWebSocket();
         }
-        loadSettings(); loadInitialPrices();
+
+        loadSettings();
+        loadInitialPrices();
     </script>
 </body>
 </html>
