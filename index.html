@@ -277,10 +277,20 @@
                         card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:#fff;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.9; white-space:nowrap;">' + timerText + '</div>';
                     }
                 } else {
-                    card.className = 'coin-card';
+                    // ТУТ ИСПРАВЛЕНО: Автоматическая цветовая дифференциация спредов по фильтру 10%
+                    if (coin.spread >= 10) {
+                        card.className = 'coin-card';
+                        card.style.backgroundColor = '#0c3c26'; // Насыщенный зелёный Pro-цвет для жирных связок
+                        card.style.borderColor = '#00b159';
+                    } else {
+                        card.className = 'coin-card';
+                        card.style.backgroundColor = '#4a151b'; // Спокойный тёмно-красный цвет для мелких связок
+                        card.style.borderColor = '#ff3b30';
+                    }
+                    
                     if(idx === selectedCoinIndex) card.style.borderColor = '#f59e0b';
                     let timerText = '⏱ Спред: ' + formatMinutesToTime(coin.arbMinutes);
-                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(2) + '%</span></div></div><div class="coin-price" style="color:#f59e0b;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8;">' + timerText + '</div>';
+                    card.innerHTML = '<div class="coin-header"><div class="coin-name" style="color:#fff;">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread" style="background:rgba(255,255,255,0.2); color:#fff;">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(2) + '%</span></div></div><div class="coin-price" style="color:#fff;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8; color:#fff;">' + timerText + '</div>';
                 }
                 card.onclick = function() {
                     selectedCoinIndex = idx;
