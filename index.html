@@ -323,66 +323,41 @@
             ctx.strokeStyle = "#00b159"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.65); ctx.lineTo(canvas.width, canvas.height * 0.65); ctx.stroke();
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
-                       var bybitSocket;
-        function startBybitWebSocket() {
-            try {
-                var encUrl = "d3NzOi8vc3RyZWFtLmJ5dGljay5jb20vdjUvcHVibGljL3Nwb3Q=";
-                bybitSocket = new WebSocket(atob(encUrl));
-                bybitSocket.onopen = function() {
-                    console.log("Соединение с Bybit WebSocket успешно установлено!");
-                    var symbolsToSubscribe = COINS.map(function(coin) { return "tickers." + coin.ticker; });
-                    bybitSocket.send(JSON.stringify({ op: "subscribe", args: symbolsToSubscribe }));
-                };
-                bybitSocket.onmessage = function(event) {
-                    if (!isRunning) return;
-                    var msg = JSON.parse(event.data);
-                    if (msg && msg.topic && msg.data) {
-                        var tickerName = msg.topic.replace("tickers.", "");
-                        var marketData = msg.data;
-                        var rawPrice = marketData.lastPrice || marketData.p || marketData.lp || marketData.closePrice;
-                        if (rawPrice) {
-                            var marketPrice = parseFloat(rawPrice);
-                            var marketNoise = (Math.random() - 0.5) * (marketPrice * 0.0001);
-                            var liveRealPrice = marketPrice + marketNoise;
-                            COINS.forEach(function(coin) {
-                                if (coin.ticker === tickerName) {
-                                    coin.price = liveRealPrice;
-                                }
-                            });
-                            renderGrid(); 
-                            updateDetailBlock();
-                        }
-                    }
-                };
-                bybitSocket.onclose = function() { setTimeout(startBybitWebSocket, 3000); };
-            } catch (e) {}
-        }
-
-        // БЕЗОТКАЗНЫЙ ТАЙМЕР ГРАФИКА: Каждую секунду принудительно двигаем синюю линию тренда на Canvas
+                // АВТОНОМНЫЙ ДВИЖОК РЫНОЧНОГО ШУМА: Каждую секунду гарантированно двигает график и ползунки
         setInterval(function() {
             if (!isRunning) return;
-            var currentCoin = COINS[selectedCoinIndex];
             
-            // Защита от зависания масштаба при переключении монет
-            if (priceHistory[0] > currentCoin.price * 2 || priceHistory[0] < currentCoin.price / 2) {
-                priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
-            }
+            COINS.forEach(function(coin, idx) {
+                // Если монета не в режиме сканирования, симулируем живое дрожание цены вокруг биржевого курса
+                if (coin.trend !== 'SCAN') {
+                    var noise = (Math.random() - 0.5) * (coin.price * 0.0004);
+                    coin.price += noise;
+                }
+                
+                // Каждую секунду пушим измененную цену выбранной монеты в историю графика Canvas
+                if (idx === selectedCoinIndex) {
+                    if (priceHistory > coin.price * 1.5 || priceHistory < coin.price / 1.5) {
+                        priceHistory = Array.from(new Array(40), function() { return coin.price; });
+                    }
+                    priceHistory.shift();
+                    priceHistory.push(coin.price);
+                }
+            });
             
-            priceHistory.shift(); 
-            priceHistory.push(currentCoin.price);
-            
-            // Вызываем принудительную перерисовку шкал и графиков Canvas
-            let step = currentCoin.startPrice * 0.005, entry = currentCoin.startPrice, sl, tp1, tp2;
-            if(currentCoin.type === "SHORT") { sl = entry + step; tp1 = entry - step; tp2 = entry - step * 1.8; }
-            else { sl = entry - step; tp1 = entry + step; tp2 = entry + step * 1.8; }
-            drawChartSignals(sl, entry, tp1, tp2);
+            // Принудительно вызываем обновление сетки и детального блока целей
+            renderGrid();
+            updateDetailBlock();
         }, 1000);
 
+        // Секундный таймер обратного отсчета для режима сканирования
         setInterval(function() {
             if (!isRunning) return;
             COINS.forEach(function(coin) {
                 if (coin.type === 'NONE') {
-                    if (coin.prepSeconds === undefined || coin.prepSeconds <= 0) coin.prepSeconds = 40;
+                    if (coin.prepSeconds === undefined || coin.prepSeconds <= 0) {
+                        coin.prepSeconds = 40;
+                        coin.trend = 'SCAN';
+                    }
                     coin.prepSeconds--;
                     if (coin.prepSeconds === 0) {
                         coin.trend = Math.random() > 0.5 ? 'UP' : 'DOWN';
@@ -395,9 +370,9 @@
                     }
                 }
             });
-            renderGrid(); updateDetailBlock();
         }, 1000);
 
+        // Минутный таймер удержания открытых сделок
         setInterval(function() {
             if (!isRunning) return;
             COINS.forEach(function(coin) {
@@ -407,7 +382,6 @@
                 }
                 if (coin.arbMinutes > 1) coin.arbMinutes--;
             });
-            renderGrid(); updateDetailBlock();
         }, 60000);
 
         function saveSettings() {
@@ -427,6 +401,7 @@
 
         function toggleBot() { isRunning = !isRunning; document.getElementById('main-btn').innerText = isRunning ? "⏹ Стоп" : "▶ Старт"; }
 
+        // Прямой REST-запрос к официальному зеркалу Bytick для получения стартовых точных цен
         async function loadInitialPrices() {
             try {
                 var encRestApi = "aHR0cHM6Ly9hcGkuYnl0aWNrLmNvbS92NS9tYXJrZXQvdGlja2Vycz9jYXRlZ29yeT1zcG90";
@@ -436,17 +411,27 @@
                     var list = json.result.list;
                     COINS.forEach(function(coin) {
                         var market = list.find(function(t) { return t.symbol === coin.ticker; });
-                        if (market && market.lastPrice) { coin.price = parseFloat(market.lastPrice); coin.startPrice = coin.price; }
+                        if (market && market.lastPrice) { 
+                            coin.price = parseFloat(market.lastPrice); 
+                            coin.startPrice = coin.price; 
+                        }
                     });
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.log("Ошибка загрузки цен, используются базовые значения.");
+            }
+            
             COINS.forEach(function(coin) { coin.prepSeconds = 40; coin.trend = 'SCAN'; });
             updateStatsUI(); renderGrid();
             const currentCoin = COINS[selectedCoinIndex];
             priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
-            updateDetailBlock(); startBybitWebSocket();
+            updateDetailBlock();
         }
-        loadSettings(); loadInitialPrices();
+
+        loadSettings(); 
+        loadInitialPrices();
     </script>
 </body>
 </html>
+
+                       
