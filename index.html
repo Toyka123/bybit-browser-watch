@@ -323,7 +323,7 @@
             ctx.strokeStyle = "#00b159"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.65); ctx.lineTo(canvas.width, canvas.height * 0.65); ctx.stroke();
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
-               var bybitSocket;
+                       var bybitSocket;
         function startBybitWebSocket() {
             try {
                 var encUrl = "d3NzOi8vc3RyZWFtLmJ5dGljay5jb20vdjUvcHVibGljL3Nwb3Q=";
@@ -344,19 +344,9 @@
                             var marketPrice = parseFloat(rawPrice);
                             var marketNoise = (Math.random() - 0.5) * (marketPrice * 0.0001);
                             var liveRealPrice = marketPrice + marketNoise;
-                            
-                            COINS.forEach(function(coin, idx) {
+                            COINS.forEach(function(coin) {
                                 if (coin.ticker === tickerName) {
                                     coin.price = liveRealPrice;
-                                    
-                                    // ТУТ ИСПРАВЛЕНО: Сравниваем первый элемент массива, чтобы код сокета не зависал
-                                    if (idx === selectedCoinIndex) {
-                                        if (priceHistory[0] > liveRealPrice * 2 || priceHistory[0] < liveRealPrice / 2) {
-                                            priceHistory = Array.from(new Array(40), function() { return liveRealPrice; });
-                                        }
-                                        priceHistory.shift(); 
-                                        priceHistory.push(liveRealPrice);
-                                    }
                                 }
                             });
                             renderGrid(); 
@@ -367,6 +357,27 @@
                 bybitSocket.onclose = function() { setTimeout(startBybitWebSocket, 3000); };
             } catch (e) {}
         }
+
+        // БЕЗОТКАЗНЫЙ ТАЙМЕР ГРАФИКА: Каждую секунду принудительно двигаем синюю линию тренда на Canvas
+        setInterval(function() {
+            if (!isRunning) return;
+            var currentCoin = COINS[selectedCoinIndex];
+            
+            // Защита от зависания масштаба при переключении монет
+            if (priceHistory[0] > currentCoin.price * 2 || priceHistory[0] < currentCoin.price / 2) {
+                priceHistory = Array.from(new Array(40), function() { return currentCoin.price; });
+            }
+            
+            priceHistory.shift(); 
+            priceHistory.push(currentCoin.price);
+            
+            // Вызываем принудительную перерисовку шкал и графиков Canvas
+            let step = currentCoin.startPrice * 0.005, entry = currentCoin.startPrice, sl, tp1, tp2;
+            if(currentCoin.type === "SHORT") { sl = entry + step; tp1 = entry - step; tp2 = entry - step * 1.8; }
+            else { sl = entry - step; tp1 = entry + step; tp2 = entry + step * 1.8; }
+            drawChartSignals(sl, entry, tp1, tp2);
+        }, 1000);
+
         setInterval(function() {
             if (!isRunning) return;
             COINS.forEach(function(coin) {
@@ -386,6 +397,7 @@
             });
             renderGrid(); updateDetailBlock();
         }, 1000);
+
         setInterval(function() {
             if (!isRunning) return;
             COINS.forEach(function(coin) {
@@ -397,6 +409,7 @@
             });
             renderGrid(); updateDetailBlock();
         }, 60000);
+
         function saveSettings() {
             localStorage.setItem('trader_dep', document.getElementById('input-deposit').value);
             localStorage.setItem('trader_risk', document.getElementById('input-risk').value);
@@ -404,13 +417,16 @@
             localStorage.setItem('trader_ema2', document.getElementById('input-ema2').value);
             updateDetailBlock();
         }
+
         function loadSettings() {
             if(localStorage.getItem('trader_dep')) document.getElementById('input-deposit').value = localStorage.getItem('trader_dep');
             if(localStorage.getItem('trader_risk')) document.getElementById('input-risk').value = localStorage.getItem('trader_risk');
             if(localStorage.getItem('trader_ema1')) document.getElementById('input-ema1').value = localStorage.getItem('trader_ema1');
             if(localStorage.getItem('trader_ema2')) document.getElementById('input-ema2').value = localStorage.getItem('trader_ema2');
         }
+
         function toggleBot() { isRunning = !isRunning; document.getElementById('main-btn').innerText = isRunning ? "⏹ Стоп" : "▶ Старт"; }
+
         async function loadInitialPrices() {
             try {
                 var encRestApi = "aHR0cHM6Ly9hcGkuYnl0aWNrLmNvbS92NS9tYXJrZXQvdGlja2Vycz9jYXRlZ29yeT1zcG90";
