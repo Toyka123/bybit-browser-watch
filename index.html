@@ -291,37 +291,19 @@
                 drawAdvancedArbitrageBlock(coin, marginUsdt);
             }
         }
-        function drawAdvancedArbitrageBlock(coin, marginUsdt) {
-            document.getElementById('slider-wrapper-zone').style.setProperty('display', 'none', 'important');
-            document.getElementById('target-boxes-zone').style.setProperty('display', 'none', 'important');
-            document.getElementById("det-name").innerHTML = '🔄 МЕЖБИРЖЕВОЙ АРБИТРАЖ: ' + coin.name;
-            let pBuy = coin.price, pSell = coin.price * (1 + (coin.spread / 100));
-            let curInp = document.getElementById('input-arb-calc-val') ? parseFloat(document.getElementById('input-arb-calc-val').value) : parseFloat(marginUsdt);
-            if (isNaN(curInp) || curInp <= 0) { curInp = parseFloat(marginUsdt); }
-            let feeP = 0.16, cleanS = coin.spread - feeP, slipI = (curInp / 100) * 0.02, finalS = cleanS - slipI, netF = 0.50;
-            let dirtyPr = curInp * (finalS / 100), netPr = dirtyPr - netF;
-            document.getElementById("det-price").innerText = (netPr > 0 ? "+" : "") + ((netPr / curInp) * 100).toFixed(2) + "%";
-            let halfM = (curInp / 2).toFixed(2), totTk = ((halfM * coin.leverage) / coin.price).toFixed(1);
-            let exT = new Date(Date.now() + coin.arbMinutes * 60000), hh = exT.getHours(), mm = exT.getMinutes();
-            if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
-            let durT = "Спред активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.arbMinutes) + ")";
-            let prCol = netPr > 0 ? '#00b159' : '#ff3b30';
-            let bCalc = "СУММА ОРДЕРА, $:• Fee: -" + feeP + "% | Slippage: -" + slipI.toFixed(3) + "% • Network: -" + netF.toFixed(2) + " USDT💰 PROFIT:" + (netPr > 0 ? "+" : "") + netPr.toFixed(2) + " USDT";
-            let bAct = "";
-            if (netPr <= 0) {
-                bAct = "🛑 СВЯЗКА УБЫТОЧНА ДЛЯ ДАННОГО ОБЪЕМА!";
-            } else {
-                bAct = "🟢 КУПИТЬ: " + coin.b1 + " @ " + pBuy.toFixed(4) + " (" + halfM + " $) 🔴 SHORT: " + coin.b2 + " @ " + pSell.toFixed(4) + " (" + halfM + " $)";
-            }
-            let bTim = "" + durT + "";
-            document.getElementById("det-info-rows").innerHTML = bCalc + bAct + bTim;
-            drawChartArbitrage();
-        }
         function drawChartSignals(sl, entry, tp1, tp2) {
             const canvas = document.getElementById("liveChart"), ctx = canvas.getContext("2d");
             ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = '#1f2630'; ctx.lineWidth = 1;
             for(let i = 1; i < 5; i++) { let y = (canvas.height / 5) * i; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); strokeCode(ctx); }
-            let max = Math.max.apply(Math, priceHistory) * 1.001, min = Math.min.apply(Math, priceHistory) * 0.999, range = max - min;
+            
+            // ТУТ ИСПРАВЛЕНО: Масштабируем график строго вокруг текущих микро-колебаний цены, чтобы линия не была прямой
+            let historyMax = Math.max.apply(Math, priceHistory);
+            let historyMin = Math.min.apply(Math, priceHistory);
+            let margin = (historyMax - historyMin) * 0.1 || entry * 0.001;
+            let max = historyMax + margin;
+            let min = historyMin - margin;
+            let range = max - min;
+            
             let getX = function(i) { return (canvas.width / (priceHistory.length - 1)) * i; }, getY = function(v) { return canvas.height - ((v - min) / range) * canvas.height; };
             let drawTargetLine = function(value, color, label) {
                 let yPos = getY(value); if (yPos >= 0 && yPos <= canvas.height) {
@@ -330,7 +312,7 @@
                 }
             };
             drawTargetLine(sl, "#ff3b30", "SL"); drawTargetLine(entry, "#2563eb", "Вход"); drawTargetLine(tp1, "#00b159", "TP1"); drawTargetLine(tp2, "#00b159", "TP2");
-            ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory));
+            ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(getX(0), getY(priceHistory[0]));
             for(let i=1; i<priceHistory.length; i++) ctx.lineTo(getX(i), getY(priceHistory[i])); ctx.stroke();
         }
         function strokeCode(c){c.stroke();}
