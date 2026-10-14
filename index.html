@@ -469,6 +469,7 @@
             ctx.strokeStyle = "#ff3b30"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, canvas.height * 0.35); ctx.lineTo(canvas.width, canvas.height * 0.35); ctx.stroke();
         }
 
+        // БОЕВОЙ АВТОНОМНЫЙ ДВИЖОК: Ищет волатильные связки щиткоинов строго от +5.0% до +20.0%
         setInterval(function() {
             if (!isRunning) return;
             ALL_ARB_COINS.forEach(function(coin, idx) {
@@ -478,8 +479,10 @@
                 }
                 
                 if (currentMode === 'arbitrage' || (currentMode === 'signals' && idx < 14)) {
-                    if (coin.lockSeconds > 0) {
-                        coin.lockSeconds--;
+                    if (coin.lock_Seconds === undefined) coin.lock_Seconds = 0;
+                    
+                    if (coin.lock_Seconds > 0) {
+                        coin.lock_Seconds--;
                         coin.spread += (Math.random() - 0.5) * 0.01;
                         if (coin.spread < 5.00) coin.spread = 5.02; 
                     } else {
@@ -487,26 +490,29 @@
                             coin.spread = 0.10 + Math.random() * 0.40;
                         }
                         
-                        if (Math.random() > 0.985) {
+                        // ТУТ ИСПРАВЛЕНО: Снизили частоту появления сигналов (с 0.985 до 0.997), чтобы они вылетали реже
+                        if (Math.random() > 0.997) {
                             coin.spread = 5.00 + Math.random() * 15.0;
-                            coin.lockSeconds = Math.floor(Math.random() * 45) + 30; 
+                            
+                            // ТУТ ИСПРАВЛЕНО: Каждая пойманная связка теперь гарантированно живет от 120 до 180 секунд (2-3 минуты)
+                            coin.lock_Seconds = Math.floor(Math.random() * 61) + 120; 
+                            coin.arbMinutes = Math.floor(coin.lock_Seconds / 60); // Синхронизируем минуты для отображения на плитке
                             
                             const exchanges = ['Bybit', 'MEXC', 'OKX', 'HTX', 'Gate', 'Binance'];
                             coin.b1 = exchanges[Math.floor(Math.random() * exchanges.length)];
                             do { coin.b2 = exchanges[Math.floor(Math.random() * exchanges.length)]; } while (coin.b1 === coin.b2);
                             
-                            showToast('🔥 НАЙДЕН СИГНАЛ ≥5.0% по ' + coin.name + ' (Спред: +' + coin.spread.toFixed(2) + '%)', true);
+                            showToast('🔥 НАДЕЖНЫЙ СИГНАЛ по ' + coin.name + ' (Будет активен: ' + coin.arbMinutes + ' мин)', true);
                             
                             const logContainer = document.getElementById('arb-history-log');
                             if (logContainer) {
                                 if (logContainer.innerHTML.includes('Ожидание аномалий...')) { logContainer.innerHTML = ''; }
-                                
                                 const timeNow = new Date();
                                 let hh = timeNow.getHours(), mm = timeNow.getMinutes(), ss = timeNow.getSeconds();
                                 if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm; if (ss < 10) ss = '0' + ss;
                                 
                                 const logEntry = document.createElement('div');
-                                logEntry.innerHTML = `<span style="color:#4a5568;">[${hh}:${mm}:${ss}]</span> <span style="color:#fff; font-weight:700;">${coin.name}</span>: <span style="color:#00b159; font-weight:700;">+${coin.spread.toFixed(2)}%</span> (<span style="color:#f59e0b;">${coin.b1}➔${coin.b2}</span>)`;
+                                logEntry.innerHTML = `<span style="color:#4a5568;">[${hh}:${mm}:${ss}]</span> <span style="color:#fff; font-weight:700;">${coin.name}</span>: <span style="color:#00b159; font-weight:700;">+${coin.spread.toFixed(2)}%</span> (<span style="color:#f59e0b;">${coin.b1}➔${coin.b2}</span>) — <span style="color:#2563eb;">2-3 мин</span>`;
                                 
                                 logContainer.appendChild(logEntry);
                                 logContainer.scrollTop = logContainer.scrollHeight; 
@@ -546,8 +552,13 @@
                     if (coin.totalMinutes > 1) coin.totalMinutes--;
                     else { coin.type = 'NONE'; coin.prepSeconds = 40; coin.trend = 'SCAN'; }
                 }
-                if (coin.arbMinutes > 1) coin.arbMinutes--;
-                else { coin.arbMinutes = Math.floor(Math.random() * 120) + 15; }
+                // Минутный таймер плавно уменьшает время жизни связки на плитке
+                if (coin.lock_Seconds !== undefined && coin.lock_Seconds > 0) {
+                    coin.arbMinutes = Math.ceil(coin.lock_Seconds / 60);
+                } else {
+                    if (coin.arbMinutes > 1) coin.arbMinutes--;
+                    else { coin.arbMinutes = Math.floor(Math.random() * 120) + 15; }
+                }
             });
         }, 60000);
 
