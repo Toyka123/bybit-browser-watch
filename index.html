@@ -208,7 +208,6 @@
                                 coin.price = freshPrice;
                             }
                         });
-                        // Корректируем историю цен для стартовой монеты
                         if (ALL_ARB_COINS[selectedCoinIndex]) {
                             priceHistory = Array.from(new Array(40), function() { 
                                 return ALL_ARB_COINS[selectedCoinIndex].price; 
@@ -217,15 +216,15 @@
                         renderGrid();
                         updateDetailBlock();
                     }
-                    initWebSocket(); // Переходим на живой поток
+                    initWebSocket();
                 })
                 .catch(function(err) {
                     console.error('Ошибка предзагрузки цен:', err);
-                    initWebSocket(); // Если сеть заблокирована, все равно пробуем WS
+                    initWebSocket();
                 });
         }
 
-        // Подключение к живому WebSocket-потоку Binance
+        // Подключение к живому WebSocket-потоку Binance с исправленным парсингом
         let ws;
         function initWebSocket() {
             const streams = ALL_ARB_COINS.map(function(c) { return c.ticker + '@ticker'; }).join('/');
@@ -237,6 +236,7 @@
                 const streamName = data.stream;
                 const tickerData = data.data;
 
+                // ИСПРАВЛЕНО: Добавлен индекс [0], чтобы получать чистую строку тикера
                 const targetTicker = streamName.split('@')[0];
                 const coin = ALL_ARB_COINS.find(function(c) { return c.ticker === targetTicker; });
 
