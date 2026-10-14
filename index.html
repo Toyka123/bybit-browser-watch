@@ -73,24 +73,9 @@
         .bybit-order-actions a { background: #1f2630; }
         .bybit-order-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
         .bybit-order-note { color: #fbbf24; font-size: 11px; line-height: 1.5; margin-top: 8px; }
-        .experiment-panel { display: flex; flex-direction: column; gap: 14px; background: #12161c; border: 1px solid #2d3848; border-radius: 12px; padding: 16px; }
-        .experiment-title { margin: 0; color: #fff; font-size: 18px; }
-        .experiment-reset { background: #1f2630; border: 1px solid #2d3848; border-radius: 6px; color: #c9d1db; padding: 8px 10px; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
-        .experiment-description, .experiment-note { color: #aab4c0; font-size: 12px; line-height: 1.6; }
-        .experiment-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-        .experiment-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-        .experiment-stat { background: #0b0e11; border: 1px solid #1f2630; border-radius: 8px; padding: 12px; }
-        .experiment-stat-label { color: #848e9c; font-size: 11px; }
-        .experiment-stat-value { margin-top: 5px; color: #fff; font: 700 20px monospace; }
-        .experiment-signals { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
-        .experiment-signal { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px 12px; background: #0b0e11; border: 1px solid #1f2630; border-radius: 8px; padding: 10px; font-size: 12px; }
-        .experiment-signal strong { color: #fff; }
-        .experiment-signal .long { color: #00d084; }
-        .experiment-signal .short { color: #ff5263; }
-        .experiment-signal .pending { color: #fbbf24; }
-        .experiment-signal .win { color: #00d084; }
-        .experiment-signal .loss { color: #ff5263; }
-        .experiment-empty { color: #848e9c; padding: 12px; text-align: center; }
+        .empty-state { color: #848e9c; padding: 12px; text-align: center; }
+        .app-note { color: #aab4c0; font-size: 12px; line-height: 1.6; }
+        .secondary-reset-button { background: #1f2630; border: 1px solid #2d3848; border-radius: 6px; color: #c9d1db; padding: 8px 10px; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
         .signal-outcome-list { display: flex; flex-direction: column; gap: 8px; max-height: 360px; overflow-y: auto; }
         .signal-outcome-record { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px 12px; padding: 12px; border: 1px solid #2d3848; border-radius: 8px; background: #12161c; color: #aab4c0; font-size: 12px; }
         .signal-outcome-record strong { color: #fff; }
@@ -137,7 +122,6 @@
             <button class="mode-btn active" id="btn-sig-15-mode" onclick="switchMode('signals15m')">📈 СИГНАЛЫ 15м</button>
             <button class="mode-btn" id="btn-sig-5-mode" onclick="switchMode('signals5m')">⚡ СИГНАЛЫ 5м</button>
             <button class="mode-btn" id="btn-arb-mode" onclick="switchMode('arbitrage')">🔄 АРБИТРАЖ</button>
-            <button class="mode-btn" id="btn-experiment-mode" onclick="switchMode('experiment')">🧪 ЭКСПЕРИМЕНТАЛЬНЫЙ ФИЛЬТР</button>
         </div>
         <div class="live-badge"><div class="live-dot"></div><span>Bybit Live Engine</span></div>
     </header>
@@ -151,26 +135,6 @@
             <div class="form-group"><label>Макс. плечо для подсказки, ×</label><input type="number" id="input-leverage-max" oninput="saveSettings(); renderGrid(); updateDetailBlock();" value="10" min="1" max="100" step="1"></div>
             <div class="stat-card" style="padding:0; background:transparent; border:none;"><div class="stat-title" style="margin-bottom:6px;">Мониторинг</div><div class="badge-active">Работает</div></div>
             <button class="btn-action" id="main-btn" onclick="toggleBot()">⏹ Стоп</button>
-        </section>
-        <section class="experiment-panel" id="experiment-panel" style="display:none;">
-            <div class="bybit-order-header"><h2 class="experiment-title">Экспериментальный фильтр импульса</h2><button type="button" class="experiment-reset" onclick="resetExperimentStats();">Сбросить статистику</button></div>
-            <div class="experiment-description">Отслеживаются линейные USDT-контракты Bybit. Сигнал появляется, когда цена за выбранное окно меняется не меньше заданного процента. Направление проверяется по цене через выбранное время.</div>
-            <div class="experiment-settings">
-                <div class="form-group"><label for="experiment-threshold">Порог движения, %</label><input type="number" id="experiment-threshold" value="0.5" min="0.05" max="20" step="0.05" oninput="saveExperimentSettings();"></div>
-                <div class="form-group"><label for="experiment-window">Окно движения</label><select id="experiment-window" onchange="saveExperimentSettings();"><option value="1">1 минута</option><option value="3">3 минуты</option><option value="5" selected>5 минут</option><option value="15">15 минут</option></select></div>
-                <div class="form-group"><label for="experiment-horizon">Проверить результат через</label><select id="experiment-horizon" onchange="saveExperimentSettings();"><option value="5">5 минут</option><option value="15" selected>15 минут</option><option value="30">30 минут</option><option value="60">60 минут</option></select></div>
-                <div class="form-group"><label for="experiment-cooldown">Пауза по монете</label><select id="experiment-cooldown" onchange="saveExperimentSettings();"><option value="1">1 минута</option><option value="5" selected>5 минут</option><option value="15">15 минут</option><option value="30">30 минут</option></select></div>
-            </div>
-            <div class="experiment-stats">
-                <div class="experiment-stat"><div class="experiment-stat-label">Удачные</div><div class="experiment-stat-value" id="experiment-wins" style="color:#00d084;">0</div></div>
-                <div class="experiment-stat"><div class="experiment-stat-label">Неудачные</div><div class="experiment-stat-value" id="experiment-losses" style="color:#ff5263;">0</div></div>
-                <div class="experiment-stat"><div class="experiment-stat-label">Удачные, %</div><div class="experiment-stat-value" id="experiment-win-rate">—</div></div>
-                <div class="experiment-stat"><div class="experiment-stat-label">Неудачные, %</div><div class="experiment-stat-value" id="experiment-loss-rate">—</div></div>
-                <div class="experiment-stat"><div class="experiment-stat-label">Ожидают проверки</div><div class="experiment-stat-value" id="experiment-pending">0</div></div>
-            </div>
-            <div class="experiment-note" id="experiment-status">Ожидание данных Bybit…</div>
-            <div class="experiment-signals" id="experiment-signals"><div class="experiment-empty">Новые сигналы появятся после накопления данных.</div></div>
-            <div class="experiment-note">Сбор новых сигналов начинается при первом открытии этой вкладки после загрузки страницы, продолжается при переходе на другие вкладки приложения и сохраняется в этом браузере. Итог фиксируется по первому доступному тику в момент проверки или позже. «Удачный» означает только, что цена оказалась в направлении сигнала; комиссии, funding, проскальзывание, цена исполнения и прибыль не учитываются. Это эксперимент, не рекомендация и не гарантия результата.</div>
         </section>
         <section class="grid-stats">
             <div class="stat-card"><div class="stat-title">Монет в стратегии</div><div class="stat-value" id="count-scanned">59</div></div>
@@ -193,12 +157,12 @@
                     <tr><td>15м</td><td id="backtest-15m-signals">—</td><td id="backtest-15m-wins">—</td><td id="backtest-15m-losses">—</td><td id="backtest-15m-rate">—</td><td id="backtest-15m-ambiguous">—</td><td id="backtest-15m-pending">—</td></tr>
                 </tbody>
             </table>
-            <div class="experiment-note" id="signal-backtest-coverage">Загружено свечей: ожидание данных.</div>
-            <div class="experiment-note">* Доля рассчитана только по однозначно завершённым результатам (TP1 или SL), а не по прибыли. В тесте вход моделируется после закрытия свечи подтверждения; цели строятся по ATR без ручных поправок. Это упрощённая проверка, не гарантия будущего результата: комиссии, проскальзывание и реальные исполнения не учтены. Для каждого интервала используются последние 100 свечей (около 8 ч 20 мин для 5м и 25 ч для 15м).</div>
+            <div class="app-note" id="signal-backtest-coverage">Загружено свечей: ожидание данных.</div>
+            <div class="app-note">* Доля рассчитана только по однозначно завершённым результатам (TP1 или SL), а не по прибыли. В тесте вход моделируется после закрытия свечи подтверждения; цели строятся по ATR без ручных поправок. Это упрощённая проверка, не гарантия будущего результата: комиссии, проскальзывание и реальные исполнения не учтены. Для каждого интервала используются последние 100 свечей (около 8 ч 20 мин для 5м и 25 ч для 15м).</div>
         </section>
         <section class="signal-outcome-list signal-mode-only" id="signal-outcome-pending-list" aria-label="Сигналы, ожидающие результата" hidden></section>
-        <div class="experiment-note signal-mode-only" id="signal-outcome-status">Результат каждого интервала сохраняется отдельно в этом браузере. Проверка идёт по закрытым свечам соответствующего интервала.</div>
-        <div class="signal-mode-only" style="display:flex; justify-content:flex-end;"><button type="button" class="experiment-reset" id="signal-outcome-reset" onclick="resetSignalOutcomeStats();">Сбросить статистику сигналов</button></div>
+        <div class="app-note signal-mode-only" id="signal-outcome-status">Результат каждого интервала сохраняется отдельно в этом браузере. Проверка идёт по закрытым свечам соответствующего интервала.</div>
+        <div class="signal-mode-only" style="display:flex; justify-content:flex-end;"><button type="button" class="secondary-reset-button" id="signal-outcome-reset" onclick="resetSignalOutcomeStats();">Сбросить статистику сигналов</button></div>
         <section class="coins-grid" id="coins-container"></section>
         <section class="detail-section">
             <div class="detail-card" id="main-detail-card">
@@ -289,13 +253,8 @@
         const SIGNAL_BACKTEST_CANDLE_LIMIT = 100;
         const RSI_PERIOD = 14;
         const ATR_PERIOD = 14;
-        const EXPERIMENT_RECORDS_KEY = 'bot_experiment_records_v1';
-        const EXPERIMENT_SETTINGS_KEY = 'bot_experiment_settings_v1';
         const SIGNAL_OUTCOME_RECORDS_KEY = 'bot_signal_outcomes_v1';
         const SIGNAL_5M_OUTCOME_RECORDS_KEY = 'bot_signal_5m_outcomes_v1';
-        const EXPERIMENT_MAX_HISTORY_MS = 16 * 60 * 1000;
-        let experimentPriceHistory = new Map();
-        let experimentRecords = [];
         const signalOutcomeStates = {
             '5m': { records: [], totals: { win: 0, loss: 0, ambiguous: 0 }, warning: '' },
             '15m': { records: [], totals: { win: 0, loss: 0, ambiguous: 0 }, warning: '' }
@@ -304,10 +263,6 @@
             '5m': null,
             '15m': null
         };
-        let lastExperimentPanelRender = 0;
-        let experimentStorageWarning = '';
-        let experimentSettingsWarning = '';
-        let experimentEnabled = false;
 
         const COINS = [
             { name: 'LTC/USDT', type: 'NONE', price: 95.40, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.28, arbMinutes: 145, ticker: 'ltcusdt', rsi: 50, trend: 'SCAN' },
@@ -573,7 +528,6 @@
                         if (Number.isFinite(realPrice) && realPrice > 0) {
                             const quoteAt = Date.now();
                             syncSignalMarketPrice(coin, realPrice, quoteAt);
-                            processExperimentPrice(coin, realPrice, quoteAt);
                             if (isSignalMode() &&
                                 getActiveSignalCoins()[selectedCoinIndex] &&
                                 getActiveSignalCoins()[selectedCoinIndex].ticker === coin.ticker) {
@@ -938,7 +892,7 @@
             list.replaceChildren();
             if (!records.length) {
                 const empty = document.createElement('div');
-                empty.className = 'experiment-empty';
+                empty.className = 'empty-state';
                 empty.innerText = 'Сейчас нет сигналов, ожидающих TP1 или SL.';
                 list.appendChild(empty);
                 return;
@@ -1864,250 +1818,6 @@
             };
         }
 
-        function getExperimentSettings() {
-            const threshold = Number(document.getElementById('experiment-threshold').value);
-            const windowMinutes = Number(document.getElementById('experiment-window').value);
-            const horizonMinutes = Number(document.getElementById('experiment-horizon').value);
-            const cooldownMinutes = Number(document.getElementById('experiment-cooldown').value);
-            if (!Number.isFinite(threshold) || threshold < 0.05 || threshold > 20) {
-                return { error: 'Порог движения должен быть от 0,05% до 20%.' };
-            }
-            if (![1, 3, 5, 15].includes(windowMinutes) ||
-                ![5, 15, 30, 60].includes(horizonMinutes) ||
-                ![1, 5, 15, 30].includes(cooldownMinutes)) {
-                return { error: 'Выбери доступные значения окна, проверки результата и паузы.' };
-            }
-            return { threshold: threshold, windowMinutes: windowMinutes, horizonMinutes: horizonMinutes, cooldownMinutes: cooldownMinutes };
-        }
-
-        function loadExperimentState() {
-            experimentRecords = [];
-            experimentStorageWarning = '';
-            experimentSettingsWarning = '';
-            try {
-                const savedSettings = localStorage.getItem(EXPERIMENT_SETTINGS_KEY);
-                if (savedSettings) {
-                    const settings = JSON.parse(savedSettings);
-                    if (Number.isFinite(Number(settings.threshold)) && Number(settings.threshold) >= 0.05 &&
-                        Number(settings.threshold) <= 20) {
-                        document.getElementById('experiment-threshold').value = settings.threshold;
-                    }
-                    if ([1, 3, 5, 15].includes(Number(settings.windowMinutes))) {
-                        document.getElementById('experiment-window').value = settings.windowMinutes;
-                    }
-                    if ([5, 15, 30, 60].includes(Number(settings.horizonMinutes))) {
-                        document.getElementById('experiment-horizon').value = settings.horizonMinutes;
-                    }
-                    if ([1, 5, 15, 30].includes(Number(settings.cooldownMinutes))) {
-                        document.getElementById('experiment-cooldown').value = settings.cooldownMinutes;
-                    }
-                }
-            } catch (error) {
-                console.warn('Не удалось загрузить настройки экспериментального фильтра:', error);
-                experimentSettingsWarning = 'Не удалось прочитать сохранённые настройки фильтра.';
-            }
-            try {
-                const savedRecords = localStorage.getItem(EXPERIMENT_RECORDS_KEY);
-                if (savedRecords) {
-                    const parsed = JSON.parse(savedRecords);
-                    if (!Array.isArray(parsed)) throw new Error('Ожидался список результатов.');
-                    experimentRecords = parsed.filter(function(record) {
-                        return record && typeof record.ticker === 'string' && typeof record.symbol === 'string' &&
-                            ['LONG', 'SHORT'].includes(record.side) && Number.isFinite(record.entryPrice) &&
-                            Number.isFinite(record.at) && Number.isFinite(record.settleAt) &&
-                            ['pending', 'win', 'loss'].includes(record.outcome) &&
-                            (record.outcome === 'pending' || Number.isFinite(record.resultChangePercent));
-                    }).slice(-500);
-                }
-            } catch (error) {
-                console.warn('Не удалось загрузить результаты экспериментального фильтра:', error);
-                experimentRecords = [];
-                experimentStorageWarning = 'Не удалось прочитать сохранённую статистику; начат новый набор результатов.';
-            }
-            updateExperimentPanel();
-        }
-
-        function saveExperimentSettings() {
-            const settings = getExperimentSettings();
-            if (settings.error) {
-                document.getElementById('experiment-status').innerText = 'Настройки не сохранены: ' + settings.error;
-                return;
-            }
-            try {
-                localStorage.setItem(EXPERIMENT_SETTINGS_KEY, JSON.stringify(settings));
-                experimentSettingsWarning = '';
-                updateExperimentPanel();
-            } catch (error) {
-                console.error('Не удалось сохранить настройки экспериментального фильтра:', error);
-                experimentSettingsWarning = 'Ошибка сохранения настроек в этом браузере.';
-                document.getElementById('experiment-status').innerText = experimentSettingsWarning;
-            }
-        }
-
-        function saveExperimentRecords() {
-            experimentRecords = experimentRecords.slice(-500);
-            try {
-                localStorage.setItem(EXPERIMENT_RECORDS_KEY, JSON.stringify(experimentRecords));
-            } catch (error) {
-                console.error('Не удалось сохранить результаты экспериментального фильтра:', error);
-                experimentStorageWarning = 'Не удалось сохранить статистику в браузере.';
-            }
-        }
-
-        function processExperimentPrice(coin, price, at) {
-            if (!experimentEnabled) return;
-            const settings = getExperimentSettings();
-            if (settings.error || !Number.isFinite(price) || price <= 0) return;
-            const ticker = coin.ticker;
-            let history = experimentPriceHistory.get(ticker);
-            if (!history) {
-                history = [];
-                experimentPriceHistory.set(ticker, history);
-            }
-            const lastSample = history[history.length - 1];
-            if (!lastSample || at - lastSample.at >= 1000) {
-                history.push({ at: at, price: price });
-            }
-            history = history.filter(function(sample) {
-                return at - sample.at <= EXPERIMENT_MAX_HISTORY_MS;
-            });
-            experimentPriceHistory.set(ticker, history);
-
-            let updatedRecords = false;
-            experimentRecords.forEach(function(record) {
-                if (record.ticker !== ticker || record.outcome !== 'pending' || at < record.settleAt) return;
-                const directionalChange = (price - record.entryPrice) / record.entryPrice *
-                    (record.side === 'LONG' ? 100 : -100);
-                record.resultPrice = price;
-                record.resultChangePercent = directionalChange;
-                record.checkedAt = at;
-                record.outcome = directionalChange > 0 ? 'win' : 'loss';
-                updatedRecords = true;
-            });
-            if (updatedRecords) saveExperimentRecords();
-
-            const targetAt = at - settings.windowMinutes * 60 * 1000;
-            const baseline = history.find(function(sample) { return sample.at <= targetAt; });
-            if (!baseline) {
-                if (currentMode === 'experiment' && at - lastExperimentPanelRender > 1000) updateExperimentPanel();
-                return;
-            }
-            const movePercent = (price - baseline.price) / baseline.price * 100;
-            if (Math.abs(movePercent) < settings.threshold) {
-                if (currentMode === 'experiment' && at - lastExperimentPanelRender > 1000) updateExperimentPanel();
-                return;
-            }
-            const lastSignal = experimentRecords.slice().reverse().find(function(record) {
-                return record.ticker === ticker;
-            });
-            if (lastSignal && at - lastSignal.at < settings.cooldownMinutes * 60 * 1000) {
-                if (currentMode === 'experiment' && at - lastExperimentPanelRender > 1000) updateExperimentPanel();
-                return;
-            }
-            experimentRecords.push({
-                ticker: ticker,
-                symbol: coin.name,
-                bybitSymbol: coin.bybitSignalSymbol || coin.name.replace('/', ''),
-                side: movePercent > 0 ? 'LONG' : 'SHORT',
-                movePercent: movePercent,
-                entryPrice: price,
-                at: at,
-                windowMinutes: settings.windowMinutes,
-                horizonMinutes: settings.horizonMinutes,
-                settleAt: at + settings.horizonMinutes * 60 * 1000,
-                outcome: 'pending'
-            });
-            saveExperimentRecords();
-            if (currentMode === 'experiment') updateExperimentPanel();
-        }
-
-        function updateExperimentPanel() {
-            const wins = experimentRecords.filter(function(record) { return record.outcome === 'win'; }).length;
-            const losses = experimentRecords.filter(function(record) { return record.outcome === 'loss'; }).length;
-            const pending = experimentRecords.filter(function(record) { return record.outcome === 'pending'; }).length;
-            const total = wins + losses;
-            document.getElementById('experiment-wins').innerText = String(wins);
-            document.getElementById('experiment-losses').innerText = String(losses);
-            document.getElementById('experiment-win-rate').innerText = total
-                ? (wins / total * 100).toFixed(1) + '%'
-                : '—';
-            document.getElementById('experiment-loss-rate').innerText = total
-                ? (losses / total * 100).toFixed(1) + '%'
-                : '—';
-            document.getElementById('experiment-pending').innerText = String(pending);
-            const status = document.getElementById('experiment-status');
-            if (experimentSettingsWarning || experimentStorageWarning) {
-                status.innerText = [experimentSettingsWarning, experimentStorageWarning].filter(Boolean).join(' ');
-            } else if (!experimentEnabled) {
-                status.innerText = 'Фильтр ещё не запущен. Открой эту вкладку, чтобы начать сбор новых сигналов.';
-            } else if (!isRunning) {
-                status.innerText = 'Мониторинг остановлен. Нажми «Старт», чтобы продолжить сбор котировок.';
-            } else {
-                const warmup = getExperimentSettings();
-                const readyCoins = Array.from(experimentPriceHistory.values()).filter(function(history) {
-                    return history.length > 1;
-                }).length;
-                status.innerText = warmup.error
-                    ? 'Проверь настройки: ' + warmup.error
-                    : 'Bybit Perpetual · получаю котировки по ' + readyCoins + ' из ' + SIGNAL_COINS.length +
-                        ' монет. Для первого сигнала нужно накопить окно ' + warmup.windowMinutes + ' мин.';
-            }
-            const list = document.getElementById('experiment-signals');
-            list.innerHTML = '';
-            const recent = experimentRecords.slice().reverse().slice(0, 25);
-            if (!recent.length) {
-                const empty = document.createElement('div');
-                empty.className = 'experiment-empty';
-                empty.innerText = 'Новые сигналы появятся после накопления данных.';
-                list.appendChild(empty);
-                lastExperimentPanelRender = Date.now();
-                return;
-            }
-            recent.forEach(function(record) {
-                const row = document.createElement('div');
-                row.className = 'experiment-signal';
-                const side = record.side === 'LONG' ? 'ЛОНГ' : 'ШОРТ';
-                const outcome = record.outcome === 'pending'
-                    ? 'Ожидание · ' + record.horizonMinutes + ' мин'
-                    : (record.outcome === 'win' ? 'Удачный' : 'Неудачный') +
-                        ' · ' + (record.resultChangePercent > 0 ? '+' : '') +
-                        Number(record.resultChangePercent).toFixed(3) + '%';
-                [
-                    { label: record.symbol, value: side, className: record.side === 'LONG' ? 'long' : 'short' },
-                    { label: 'Импульс', value: (record.movePercent > 0 ? '+' : '') + record.movePercent.toFixed(3) + '%' },
-                    { label: 'Цена сигнала', value: formatMarketPrice(record.entryPrice) },
-                    { label: 'Время', value: new Date(record.at).toLocaleString() },
-                    { label: 'Результат', value: outcome, className: record.outcome }
-                ].forEach(function(item) {
-                    const cell = document.createElement('div');
-                    const label = document.createElement('span');
-                    const value = document.createElement('strong');
-                    label.innerText = item.label + ': ';
-                    value.innerText = item.value;
-                    if (item.className) value.className = item.className;
-                    cell.appendChild(label);
-                    cell.appendChild(value);
-                    row.appendChild(cell);
-                });
-                list.appendChild(row);
-            });
-            lastExperimentPanelRender = Date.now();
-        }
-
-        function resetExperimentStats() {
-            if (!window.confirm('Сбросить все сохранённые сигналы и результаты экспериментального фильтра?')) return;
-            experimentRecords = [];
-            experimentPriceHistory.clear();
-            experimentStorageWarning = '';
-            try {
-                localStorage.removeItem(EXPERIMENT_RECORDS_KEY);
-            } catch (error) {
-                console.error('Не удалось очистить статистику экспериментального фильтра:', error);
-                experimentStorageWarning = 'Не удалось удалить сохранённую статистику.';
-            }
-            updateExperimentPanel();
-        }
-
         function formatAssetQuantity(quantity) {
             const fixed = quantity.toFixed(6);
             return fixed.indexOf('.') === -1 ? fixed : fixed.replace(/0+$/, '').replace(/\.$/, '');
@@ -2205,11 +1915,6 @@
             document.getElementById('btn-sig-15-mode').classList.remove('active');
             document.getElementById('btn-sig-5-mode').classList.remove('active');
             document.getElementById('btn-arb-mode').classList.remove('active');
-            document.getElementById('btn-experiment-mode').classList.remove('active');
-            document.getElementById('experiment-panel').style.display = mode === 'experiment' ? 'flex' : 'none';
-            document.querySelector('.grid-stats').style.display = mode === 'experiment' ? 'none' : '';
-            document.getElementById('coins-container').style.display = mode === 'experiment' ? 'none' : '';
-            document.querySelector('.detail-section').style.display = mode === 'experiment' ? 'none' : '';
             document.querySelectorAll('.signal-mode-only').forEach(function(card) {
                 card.style.display = isSignalMode(mode) ? '' : 'none';
             });
@@ -2232,12 +1937,6 @@
                 renderGrid();
                 updateDetailBlock();
                 drawChart();
-                return;
-            }
-            if (mode === 'experiment') {
-                experimentEnabled = true;
-                document.getElementById('btn-experiment-mode').classList.add('active');
-                updateExperimentPanel();
                 return;
             }
             if (mode === 'arbitrage') {
@@ -2585,7 +2284,6 @@
             isRunning = !isRunning; const btn = document.getElementById('main-btn'); const badge = document.querySelector('.badge-active');
             if (isRunning) { btn.innerText = '⏹ Стоп'; btn.style.backgroundColor = '#ff3b30'; badge.innerText = 'Работает'; badge.style.color = '#00b159'; badge.style.backgroundColor = 'rgba(0, 177, 89, 0.1)'; }
             else { btn.innerText = '▶ Старт'; btn.style.backgroundColor = '#00b159'; badge.innerText = 'Пауза'; badge.style.color = '#f59e0b'; badge.style.backgroundColor = 'rgba(245, 158, 11, 0.1)'; }
-            if (currentMode === 'experiment') updateExperimentPanel();
         }
 
         setInterval(function() {
@@ -2643,7 +2341,6 @@
             if(localStorage.getItem('bot_signal_margin')) document.getElementById('input-signal-margin').value = localStorage.getItem('bot_signal_margin');
             loadSignalOutcomeRecords('15m');
             loadSignalOutcomeRecords('5m');
-            loadExperimentState();
             switchMode('signals15m'); loadInitialPrices();
         };
     </script>
