@@ -20,7 +20,7 @@
         .grid-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; background: #12161c; border: 1px solid #1f2630; border-radius: 12px; padding: 20px; align-items: flex-end; }
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #848e9c; }
-        input { background-color: #1f2630; color: #ffffff; border: 1px solid #2d3848; border-radius: 6px; padding: 8px 12px; font-size: 13px; outline: none; }
+        input, select { background-color: #1f2630; color: #ffffff; border: 1px solid #2d3848; border-radius: 6px; padding: 8px 12px; font-size: 13px; outline: none; }
         #toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 1000; }
         .toast { padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
         .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
@@ -93,6 +93,8 @@
             <div class="form-group"><label>Risk, %</label><input type="number" id="input-risk" oninput="saveSettings()" value="1"></div>
             <div class="form-group"><label>EMA быстрая</label><input type="number" id="input-ema1" oninput="saveSettings(); refreshSignalData()" min="2" max="50" value="9"></div>
             <div class="form-group"><label>EMA медленная</label><input type="number" id="input-ema2" oninput="saveSettings(); refreshSignalData()" min="3" max="200" value="21"></div>
+            <div class="form-group"><label>Мин. плечо для подсказки, ×</label><input type="number" id="input-leverage-min" oninput="saveSettings(); renderGrid(); updateDetailBlock();" value="4" min="1" max="100" step="1"></div>
+            <div class="form-group"><label>Макс. плечо для подсказки, ×</label><input type="number" id="input-leverage-max" oninput="saveSettings(); renderGrid(); updateDetailBlock();" value="10" min="1" max="100" step="1"></div>
             <div class="stat-card" style="padding:0; background:transparent; border:none;"><div class="stat-title" style="margin-bottom:6px;">Мониторинг</div><div class="badge-active">Работает</div></div>
             <button class="btn-action" id="main-btn" onclick="toggleBot()">⏹ Стоп</button>
         </section>
@@ -115,6 +117,17 @@
                 <div class="info-row" id="det-info-rows"></div>
                 <div class="exchange-prices-grid" id="exchange-prices-grid"></div>
                 <div class="trade-scheme" id="trade-scheme" style="display:none;"></div>
+                <div class="grid-settings signal-mode-only" style="padding:12px; gap:10px;">
+                    <div class="form-group"><label>Моя маржа на сделку, $</label><input type="number" id="input-signal-margin" oninput="saveSettings(); refreshSignalTargets();" value="20" min="0.01" step="0.01"></div>
+                    <div class="form-group"><label>Плечо для расчёта, ×</label><input type="number" id="input-signal-leverage" oninput="saveSettings(); refreshSignalTargets();" value="5" min="1" max="100" step="1"></div>
+                    <div class="form-group"><label>Сторона позиции</label><select id="input-signal-direction" onchange="updateDetailBlock();"><option value="LONG">LONG · Лонг</option><option value="SHORT">SHORT · Шорт</option></select></div>
+                    <div class="form-group"><label>Цена входа · Bybit</label><input type="number" id="input-signal-entry" oninput="updateSignalEntryPrice();" min="0" step="any" placeholder="Цена входа" disabled></div>
+                    <div class="form-group"><label>Тейк-профит 1 (TP1), цена</label><input type="number" id="input-signal-tp1" oninput="updateSignalPriceTargets();" min="0" step="any" placeholder="Цена TP1" disabled></div>
+                    <div class="form-group"><label>Тейк-профит 2 (TP2), цена</label><input type="number" id="input-signal-tp2" oninput="updateSignalPriceTargets();" min="0" step="any" placeholder="Цена TP2" disabled></div>
+                    <div class="form-group"><label>Стоп-лосс (SL), цена</label><input type="number" id="input-signal-sl" oninput="updateSignalPriceTargets();" min="0" step="any" placeholder="Цена SL" disabled></div>
+                    <div class="info-row" id="signal-pnl-estimate" style="grid-column:1/-1;">Оценка результата появится после активного сигнала.</div>
+                    <div class="info-row" style="grid-column:1/-1;">Выбери сторону позиции и введи фактическую цену входа, TP/SL как в Bybit. Для активного сигнала подставлю пример уровней: TP1 на расстоянии стопа, TP2 — вдвое дальше; их можно изменить. Без сигнала заполни все цены вручную. Суммы расчётные, до комиссий и funding; ордера сайт не размещает и не меняет.</div>
+                </div>
                 <div style="margin:10px 0;" id="slider-wrapper-zone">
                     <div class="slider-labels"><span>SL</span><span>Вход</span><span>TP1</span><span>TP2</span></div>
                     <div class="slider-bar"><div class="slider-pointer" id="slider-pt"></div></div>
@@ -442,6 +455,7 @@
                             coin.trend = 'SCAN';
                             coin.type = 'NONE';
                             coin.signal = null;
+                            coin.volatilityPercent = null;
                             coin.signalStatus = 'Свечи недоступны: ' + err.message;
                             coin.signalKey = '';
                             console.warn(coin.name + ' signal candle request failed:', err);
@@ -450,6 +464,10 @@
                 }
                 if (currentMode === 'signals') {
                     updateSignalStats();
+                    renderGrid();
+                    updateDetailBlock();
+                } else {
+                    updateArbCount();
                     renderGrid();
                     updateDetailBlock();
                 }
@@ -527,6 +545,7 @@
 
         function analyzeSignalCandles(coin, candles, fastPeriod, slowPeriod) {
             if (candles.length < Math.max(slowPeriod + RSI_PERIOD, 35)) {
+                coin.volatilityPercent = null;
                 clearSignal(coin, 'Недостаточно закрытых свечей для расчёта');
                 return;
             }
@@ -535,6 +554,10 @@
             const slowEMA = calculateEMA(closes, slowPeriod);
             const rsi = calculateRSI(closes, RSI_PERIOD);
             const last = candles.length - 1;
+            const latestAtr = calculateATR(candles, last, ATR_PERIOD);
+            coin.volatilityPercent = Number.isFinite(latestAtr) && candles[last].close > 0
+                ? latestAtr / candles[last].close * 100
+                : null;
             const currentPrice = Number(coin.price);
             let crossIndex = -1;
             for (let i = Math.max(1, last - 1); i <= last; i++) {
@@ -573,21 +596,30 @@
             const riskDistance = Math.max(atr * 1.5, entry * 0.005);
             const direction = isLong ? 1 : -1;
             const key = coin.ticker + ':' + candles[crossIndex].closeTime + ':' + (isLong ? 'LONG' : 'SHORT');
-            coin.trend = 'SIGNAL';
-            coin.type = isLong ? 'LONG' : 'SHORT';
-            coin.signalKey = key;
-            coin.signalStatus = 'Подтверждён закрытой свечой';
-            coin.signal = {
+            const signalType = isLong ? 'LONG' : 'SHORT';
+            const signal = {
                 entry: entry,
                 stopLoss: entry - direction * riskDistance,
-                takeProfit1: entry + direction * riskDistance * 1.5,
-                takeProfit2: entry + direction * riskDistance * 2.5,
+                atrStopLoss: entry - direction * riskDistance,
+                takeProfit1: NaN,
+                takeProfit2: NaN,
                 candleTime: candles[crossIndex].closeTime,
                 fastEMA: fastEMA[crossIndex],
                 slowEMA: slowEMA[crossIndex],
                 rsi: rsi[crossIndex],
-                atr: atr
+                atr: atr,
+                signalKey: key
             };
+            const takeProfits = calculateSignalTakeProfits(signal, signalType);
+            if (takeProfits) {
+                signal.takeProfit1 = takeProfits.takeProfit1;
+                signal.takeProfit2 = takeProfits.takeProfit2;
+            }
+            coin.trend = 'SIGNAL';
+            coin.type = signalType;
+            coin.signalKey = key;
+            coin.signalStatus = 'Подтверждён закрытой свечой';
+            coin.signal = signal;
             coin.indicators = { fastEMA: fastEMA[last], slowEMA: slowEMA[last], rsi: rsi[last] };
             if (coin.lastNotifiedSignalKey !== key) {
                 coin.lastNotifiedSignalKey = key;
@@ -599,6 +631,176 @@
             const activeSignals = SIGNAL_COINS.filter(function(coin) { return coin.trend === 'SIGNAL'; }).length;
             document.getElementById('label-total-signals').innerText = activeSignals + ' подтверждённых сигналов';
             document.getElementById('count-scanned').innerText = SIGNAL_COINS.length;
+        }
+
+        function calculateSignalTakeProfits(signal, direction) {
+            if (signal.manualEntryPrice === undefined) {
+                const storedKey = localStorage.getItem('bot_signal_price_key');
+                const storedEntry = Number(localStorage.getItem('bot_signal_price_entry'));
+                if (storedKey && storedKey === signal.signalKey && Number.isFinite(storedEntry) && storedEntry > 0) {
+                    signal.manualEntryPrice = storedEntry;
+                }
+            }
+            const entryPrice = signal.manualEntryPrice === undefined ? signal.entry : signal.manualEntryPrice;
+            if (!Number.isFinite(entryPrice) || entryPrice <= 0) return null;
+            const sign = direction === 'LONG' ? 1 : -1;
+            if (!signal.manualTargetPrices) {
+                const storedKey = localStorage.getItem('bot_signal_price_key');
+                const storedEntry = Number(localStorage.getItem('bot_signal_price_entry'));
+                if (storedKey && storedKey === signal.signalKey && storedEntry === entryPrice) {
+                    const savedTargets = {
+                        takeProfit1: Number(localStorage.getItem('bot_signal_price_tp1')),
+                        takeProfit2: Number(localStorage.getItem('bot_signal_price_tp2')),
+                        stopLoss: Number(localStorage.getItem('bot_signal_price_sl'))
+                    };
+                    if (Object.keys(savedTargets).every(function(key) {
+                        return Number.isFinite(savedTargets[key]) && savedTargets[key] > 0;
+                    })) signal.manualTargetPrices = savedTargets;
+                }
+                if (!signal.manualTargetPrices) {
+                    const atrStopLoss = Number.isFinite(signal.atrStopLoss) ? signal.atrStopLoss : signal.stopLoss;
+                    if (!Number.isFinite(atrStopLoss) || atrStopLoss <= 0 ||
+                        (direction === 'LONG' && atrStopLoss >= signal.entry) ||
+                        (direction === 'SHORT' && atrStopLoss <= signal.entry)) return null;
+                    const riskDistance = Math.abs(signal.entry - atrStopLoss);
+                    signal.manualTargetPrices = {
+                        takeProfit1: entryPrice + sign * riskDistance,
+                        takeProfit2: entryPrice + sign * riskDistance * 2,
+                        stopLoss: entryPrice - sign * riskDistance
+                    };
+                }
+            }
+            const targets = signal.manualTargetPrices;
+            const validLong = direction === 'LONG' && targets.takeProfit1 > entryPrice &&
+                targets.takeProfit2 > targets.takeProfit1 && targets.stopLoss < entryPrice;
+            const validShort = direction === 'SHORT' && targets.takeProfit1 < entryPrice &&
+                targets.takeProfit2 < targets.takeProfit1 && targets.stopLoss > entryPrice;
+            if (![targets.takeProfit1, targets.takeProfit2, targets.stopLoss].every(function(price) {
+                return Number.isFinite(price) && price > 0;
+            }) || (!validLong && !validShort)) return null;
+            return {
+                entry: entryPrice,
+                takeProfit1: targets.takeProfit1,
+                takeProfit2: targets.takeProfit2,
+                stopLoss: targets.stopLoss
+            };
+        }
+
+        function getSignalEntryPrice(signal) {
+            const entryPrice = signal.manualEntryPrice === undefined ? signal.entry : signal.manualEntryPrice;
+            return Number.isFinite(entryPrice) && entryPrice > 0 ? entryPrice : NaN;
+        }
+
+        function calculateSignalProfitEstimate(signal, direction) {
+            const margin = Number(document.getElementById('input-signal-margin').value);
+            const leverage = Number(document.getElementById('input-signal-leverage').value);
+            if (!Number.isFinite(margin) || margin <= 0) return { error: 'Введи маржу больше $0.' };
+            if (!Number.isInteger(leverage) || leverage < 1 || leverage > 100) {
+                return { error: 'Плечо должно быть целым числом от 1× до 100×.' };
+            }
+            const entryPrice = getSignalEntryPrice(signal);
+            if (!Number.isFinite(entryPrice)) return { error: 'Введи корректную фактическую цену входа из Bybit.' };
+            const targets = calculateSignalTakeProfits(signal, direction);
+            if (!targets) return { error: 'Проверь цены: для LONG TP1 и TP2 должны быть выше входа, SL ниже; для SHORT — наоборот.' };
+            const quantity = margin * leverage / entryPrice;
+            const sign = direction === 'LONG' ? 1 : -1;
+            return {
+                margin: margin,
+                leverage: leverage,
+                notional: margin * leverage,
+                quantity: quantity,
+                tp1Profit: sign * quantity * (targets.takeProfit1 - entryPrice),
+                tp2Profit: sign * quantity * (targets.takeProfit2 - entryPrice),
+                slProfit: sign * quantity * (targets.stopLoss - entryPrice),
+                entry: entryPrice,
+                targets: targets
+            };
+        }
+
+        function updateSignalEntryPrice() {
+            const coin = currentMode === 'signals' ? SIGNAL_COINS[selectedCoinIndex] : null;
+            if (!coin || !coin.signal) {
+                updateDetailBlock(true);
+                return;
+            }
+            const signal = coin.signal;
+            signal.manualEntryPrice = Number(document.getElementById('input-signal-entry').value);
+            signal.manualTargetPrices = null;
+            localStorage.setItem('bot_signal_price_key', signal.signalKey || '');
+            localStorage.setItem('bot_signal_price_entry', document.getElementById('input-signal-entry').value);
+            localStorage.removeItem('bot_signal_price_tp1');
+            localStorage.removeItem('bot_signal_price_tp2');
+            localStorage.removeItem('bot_signal_price_sl');
+            const targets = calculateSignalTakeProfits(signal, coin.type);
+            if (targets) {
+                document.getElementById('input-signal-tp1').value = targets.takeProfit1;
+                document.getElementById('input-signal-tp2').value = targets.takeProfit2;
+                document.getElementById('input-signal-sl').value = targets.stopLoss;
+            }
+            updateDetailBlock(true);
+        }
+
+        function updateSignalPriceTargets() {
+            const coin = currentMode === 'signals' ? SIGNAL_COINS[selectedCoinIndex] : null;
+            if (!coin || !coin.signal) {
+                updateDetailBlock(true);
+                return;
+            }
+            const signal = coin.signal;
+            signal.manualTargetPrices = {
+                takeProfit1: Number(document.getElementById('input-signal-tp1').value),
+                takeProfit2: Number(document.getElementById('input-signal-tp2').value),
+                stopLoss: Number(document.getElementById('input-signal-sl').value)
+            };
+            localStorage.setItem('bot_signal_price_key', signal.signalKey || '');
+            localStorage.setItem('bot_signal_price_entry', document.getElementById('input-signal-entry').value);
+            localStorage.setItem('bot_signal_price_tp1', document.getElementById('input-signal-tp1').value);
+            localStorage.setItem('bot_signal_price_tp2', document.getElementById('input-signal-tp2').value);
+            localStorage.setItem('bot_signal_price_sl', document.getElementById('input-signal-sl').value);
+            updateDetailBlock(true);
+        }
+
+        function updateSignalProfitEstimate(coin) {
+            const output = document.getElementById('signal-pnl-estimate');
+            if (!output) return;
+            const activeSignal = Boolean(coin && coin.signal && coin.trend !== 'SCAN');
+            const direction = activeSignal
+                ? coin.type
+                : document.getElementById('input-signal-direction').value;
+            const signal = activeSignal ? coin.signal : {
+                entry: Number(document.getElementById('input-signal-entry').value),
+                manualTargetPrices: {
+                    takeProfit1: Number(document.getElementById('input-signal-tp1').value),
+                    takeProfit2: Number(document.getElementById('input-signal-tp2').value),
+                    stopLoss: Number(document.getElementById('input-signal-sl').value)
+                }
+            };
+            const estimate = calculateSignalProfitEstimate(signal, direction);
+            if (estimate.error) {
+                output.innerText = activeSignal
+                    ? estimate.error
+                    : 'Без активного сигнала: выбери LONG/SHORT и заполни цену входа, TP1, TP2 и SL.';
+                return;
+            }
+            output.innerText = 'При марже $' + estimate.margin.toFixed(2) + ' и плече ' + estimate.leverage +
+                '× размер позиции ≈ $' + estimate.notional.toFixed(2) + '. Результат до расходов: TP1 около +$' +
+                estimate.tp1Profit.toFixed(2) + ', TP2 около +$' + estimate.tp2Profit.toFixed(2) +
+                ', при SL около ' + (estimate.slProfit < 0 ? '−$' : '+$') +
+                Math.abs(estimate.slProfit).toFixed(2) + ' (до комиссий и funding).';
+        }
+
+        function refreshSignalTargets() {
+            SIGNAL_COINS.forEach(function(coin) {
+                if (coin.signal) {
+                    const targets = calculateSignalTakeProfits(coin.signal, coin.type);
+                    coin.signal.takeProfit1 = targets ? targets.takeProfit1 : NaN;
+                    coin.signal.takeProfit2 = targets ? targets.takeProfit2 : NaN;
+                }
+            });
+            if (currentMode === 'signals') {
+                renderGrid();
+                updateDetailBlock();
+            }
         }
 
         function initRestTickerFeed(exchange, market) {
@@ -910,7 +1112,7 @@
             const card = document.querySelector('.coin-card[data-ticker="' + coin.ticker + '"]');
             const pair = getArbPair(coin);
             if (!card || !pair) return;
-            const plan = getArbTradePlan(pair);
+            const plan = getArbTradePlan(pair, coin);
             const spread = card.querySelector('.coin-price');
             const buy = card.querySelector('.arb-buy-exchange');
             const sell = card.querySelector('.arb-sell-exchange');
@@ -918,17 +1120,21 @@
             if (spread) spread.innerText = '+' + pair.spread.toFixed(2) + '%';
             if (buy) buy.innerText = pair.buyExchange;
             if (sell) sell.innerText = pair.sellExchange;
-            if (summary) summary.innerText = plan
+            if (summary) summary.innerText = plan && !plan.error
                 ? 'BUY Spot $' + plan.spotAmount.toFixed(2) + ' / SHORT Perp $' + plan.perpetualAmount.toFixed(2) +
-                    ' • gross ~+$' + plan.expectedProfit.toFixed(4) + ' before costs'
-                : 'Укажи бюджет больше $0 • цены ' + formatMarketPrice(pair.buyPrice) + ' / ' +
-                    formatMarketPrice(pair.sellPrice);
+                    ' • ' + plan.leverage + '× • gross ~+$' + plan.expectedProfit.toFixed(4)
+                : (plan && plan.error ? plan.error : 'Нет расчёта') + ' • цены ' +
+                    formatMarketPrice(pair.buyPrice) + ' / ' + formatMarketPrice(pair.sellPrice);
         }
         function saveSettings() {
             localStorage.setItem('bot_deposit', document.getElementById('input-deposit').value);
             localStorage.setItem('bot_risk', document.getElementById('input-risk').value);
             localStorage.setItem('bot_ema1', document.getElementById('input-ema1').value);
             localStorage.setItem('bot_ema2', document.getElementById('input-ema2').value);
+            localStorage.setItem('bot_leverage_min', document.getElementById('input-leverage-min').value);
+            localStorage.setItem('bot_leverage_max', document.getElementById('input-leverage-max').value);
+            localStorage.setItem('bot_signal_leverage', document.getElementById('input-signal-leverage').value);
+            localStorage.setItem('bot_signal_margin', document.getElementById('input-signal-margin').value);
         }
 
         function getArbPair(coin) {
@@ -973,11 +1179,43 @@
             };
         }
 
-        function getArbTradePlan(pair) {
+        function getLeverageRecommendation(coin, volatilityPercentOverride) {
+            const minLeverage = Number(document.getElementById('input-leverage-min').value);
+            const maxLeverage = Number(document.getElementById('input-leverage-max').value);
+            if (!Number.isInteger(minLeverage) || !Number.isInteger(maxLeverage) ||
+                minLeverage < 1 || maxLeverage > 100 || maxLeverage < minLeverage) {
+                return { error: 'Проверь диапазон плеча: целые значения от 1× до 100×, минимум не выше максимума.' };
+            }
+            const volatilityPercent = Number(volatilityPercentOverride === undefined
+                ? coin.volatilityPercent
+                : volatilityPercentOverride);
+            if (!Number.isFinite(volatilityPercent) || volatilityPercent <= 0) {
+                return { error: 'Жду данные ATR Bybit, чтобы оценить волатильность.' };
+            }
+            const volatilityCeiling = Math.floor(25 / (3 * volatilityPercent));
+            if (volatilityCeiling < minLeverage) {
+                return {
+                    error: 'По текущей волатильности расчётный предел около ' + Math.max(1, volatilityCeiling) +
+                        '× — ниже заданного минимума ' + minLeverage + '×. Снизь минимум или пропусти сделку.'
+                };
+            }
+            return {
+                leverage: Math.min(maxLeverage, volatilityCeiling),
+                minLeverage: minLeverage,
+                maxLeverage: maxLeverage,
+                volatilityPercent: volatilityPercent,
+                volatilityCeiling: volatilityCeiling
+            };
+        }
+
+        function getArbTradePlan(pair, coin) {
             const budget = Number(document.getElementById('input-deposit').value);
-            const combinedPrice = pair.buyPrice + pair.sellPrice;
-            if (!Number.isFinite(budget) || budget <= 0 || !Number.isFinite(combinedPrice) || combinedPrice <= 0) return null;
-            const quantity = budget / combinedPrice;
+            if (!Number.isFinite(budget) || budget <= 0) return { error: 'Укажи бюджет больше $0.' };
+            const leverage = getLeverageRecommendation(coin);
+            if (leverage.error) return leverage;
+            const capitalPerUnit = pair.buyPrice + pair.sellPrice / leverage.leverage;
+            if (!Number.isFinite(capitalPerUnit) || capitalPerUnit <= 0) return { error: 'Не удалось рассчитать размер позиции.' };
+            const quantity = budget / capitalPerUnit;
             const convergencePrice = (pair.buyPrice + pair.sellPrice) / 2;
             const spotProfit = quantity * (convergencePrice - pair.buyPrice);
             const perpetualProfit = quantity * (pair.sellPrice - convergencePrice);
@@ -986,6 +1224,10 @@
                 quantity: quantity,
                 spotAmount: quantity * pair.buyPrice,
                 perpetualAmount: quantity * pair.sellPrice,
+                perpetualMargin: quantity * pair.sellPrice / leverage.leverage,
+                leverage: leverage.leverage,
+                volatilityPercent: leverage.volatilityPercent,
+                leverageRange: leverage.minLeverage + '×–' + leverage.maxLeverage + '×',
                 convergencePrice: convergencePrice,
                 spotProfit: spotProfit,
                 perpetualProfit: perpetualProfit,
@@ -1090,17 +1332,24 @@
                         card.className = 'coin-card new-signal' + (coin.type === 'SHORT' ? ' short-style' : '');
                         if(idx === selectedCoinIndex) card.style.borderColor = '#00ff73';
                         const signalTime = new Date(coin.signal.candleTime).toLocaleTimeString();
-                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="' + (coin.type === 'LONG' ? 'badge-long' : 'badge-short') + '">' + coin.type + '</span></div><div class="coin-price" style="color:#fff;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.9;">EMA ' + coin.signal.fastEMA.toFixed(4) + ' / ' + coin.signal.slowEMA.toFixed(4) + ' · RSI ' + coin.signal.rsi.toFixed(1) + ' · 15м ' + signalTime + '</div>';
+                        const signalLeverage = getLeverageRecommendation(
+                            coin,
+                            coin.signal.atr / coin.signal.entry * 100
+                        );
+                        const leverageLabel = signalLeverage.error
+                            ? 'Задано ' + document.getElementById('input-signal-leverage').value + '× · осторожный ориентир недоступен'
+                            : 'Задано ' + document.getElementById('input-signal-leverage').value + '× · ориентир по ATR: ' + signalLeverage.leverage + '×';
+                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="' + (coin.type === 'LONG' ? 'badge-long' : 'badge-short') + '">' + coin.type + '</span></div><div class="coin-price" style="color:#fff;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.9;">EMA ' + coin.signal.fastEMA.toFixed(4) + ' / ' + coin.signal.slowEMA.toFixed(4) + ' · RSI ' + coin.signal.rsi.toFixed(1) + ' · 15м ' + signalTime + '</div><div style="font-size:11px; font-weight:700; opacity:0.95;">' + leverageLabel + ' · TP/SL по цене</div>';
                     }
                 } else {
                     const pair = arbPair;
-                    const plan = getArbTradePlan(pair);
+                    const plan = getArbTradePlan(pair, coin);
                     card.className = 'coin-card'; card.style.backgroundColor = '#0c3c26'; 
                     card.style.borderColor = idx === selectedCoinIndex ? '#f59e0b' : coin.arbStable ? '#00b159' : '#f59e0b';
-                    const summary = plan
+                    const summary = plan && !plan.error
                         ? 'BUY Spot $' + plan.spotAmount.toFixed(2) + ' / SHORT Perp $' + plan.perpetualAmount.toFixed(2) +
-                            ' • gross ~+$' + plan.expectedProfit.toFixed(4) + ' before costs'
-                        : 'Укажи бюджет больше $0';
+                            ' • ' + plan.leverage + '× • gross ~+$' + plan.expectedProfit.toFixed(4)
+                        : (plan && plan.error ? plan.error : 'Нет расчёта');
                     card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread arb-buy-exchange" style="background:rgba(255,255,255,0.2); color:#fff;">' + pair.buyExchange + ' Spot</span><span class="badge-short arb-sell-exchange" style="background:#f59e0b; color:#fff;">' + pair.sellExchange + ' Perp</span></div></div><div class="coin-price" style="color:#fff;">+' + pair.spread.toFixed(2) + '%</div><div class="coin-arb-summary" style="font-size:11px; font-weight:600; opacity:0.8; color:#fff;">' + summary + '</div><div style="font-size:10px;opacity:0.7;color:#fff;">' + formatMarketPrice(pair.buyPrice) + ' / ' + formatMarketPrice(pair.sellPrice) + ' · спред стабилен 60с</div>';
                 }
                 if (idx === selectedCoinIndex) card.classList.add('selected');
@@ -1120,7 +1369,7 @@
                     : 'Пока нет кандидатов с устойчивым положительным спредом выше 0,50%. Краткие скачки отфильтровываются; котировки старше 15 секунд исключаются.') + '</div>';
             }
         }
-        function updateDetailBlock() {
+        function updateDetailBlock(preserveSignalPriceInputs) {
             const activeList = currentMode === 'signals' ? SIGNAL_COINS : ALL_ARB_COINS;
             const coin = activeList[selectedCoinIndex]; if (!coin) return;
             const deposit = parseFloat(document.getElementById('input-deposit').value) || 10;
@@ -1133,23 +1382,99 @@
                 document.getElementById('slider-wrapper-zone').style.display = 'block';
                 document.getElementById('target-boxes-zone').style.display = 'grid';
                 document.getElementById('trade-scheme').style.display = 'none';
+                updateSignalProfitEstimate(coin);
                 document.getElementById('det-name').innerText = coin.name + (coin.trend !== 'SCAN' ? ' · ' + coin.type : ' · СКАНИРОВАНИЕ');
                 document.getElementById('det-price').innerText = coin.price.toFixed(4);
                 if (coin.trend === 'SCAN') {
-                    document.getElementById('det-info-rows').innerHTML = '<div>Статус: ' + (coin.signalStatus || 'Загружаю реальные 15-минутные свечи Bybit...') + '</div><div>Правило: пересечение EMA ' + document.getElementById('input-ema1').value + '/' + document.getElementById('input-ema2').value + ' и подтверждение RSI(14).</div>';
-                    document.getElementById('lbl-sl').innerText = '-'; document.getElementById('lbl-entry').innerText = '-';
-                    document.getElementById('lbl-tp1').innerText = '-'; document.getElementById('lbl-tp2').innerText = '-';
-                    document.getElementById('box-entry').innerText = coin.price.toFixed(4);
-                    document.getElementById('box-sl').innerText = '-'; document.getElementById('box-tp1').innerText = '-'; document.getElementById('box-tp2').innerText = '-';
+                    document.getElementById('det-info-rows').innerHTML = '<div>Статус сигнала: ' + (coin.signalStatus || 'Жду пересечения EMA на закрытой свече') + '.</div><div>Правило: пересечение EMA ' + document.getElementById('input-ema1').value + '/' + document.getElementById('input-ema2').value + ' и подтверждение RSI(14).</div><div>Активного сигнала нет; для ручного расчёта укажи сторону позиции и цены из Bybit.</div>';
+                    document.getElementById('input-signal-direction').disabled = false;
+                    ['input-signal-entry', 'input-signal-tp1', 'input-signal-tp2', 'input-signal-sl'].forEach(function(id) {
+                        document.getElementById(id).disabled = false;
+                    });
+                    const manualPosition = {
+                        entry: Number(document.getElementById('input-signal-entry').value),
+                        manualTargetPrices: {
+                            takeProfit1: Number(document.getElementById('input-signal-tp1').value),
+                            takeProfit2: Number(document.getElementById('input-signal-tp2').value),
+                            stopLoss: Number(document.getElementById('input-signal-sl').value)
+                        }
+                    };
+                    const manualTargets = calculateSignalTakeProfits(
+                        manualPosition,
+                        document.getElementById('input-signal-direction').value
+                    );
+                    document.getElementById('lbl-sl').innerText = manualTargets ? manualTargets.stopLoss.toFixed(6) : '-';
+                    document.getElementById('lbl-entry').innerText = Number.isFinite(manualPosition.entry) && manualPosition.entry > 0 ? manualPosition.entry.toFixed(6) : '-';
+                    document.getElementById('lbl-tp1').innerText = manualTargets ? manualTargets.takeProfit1.toFixed(6) : '-';
+                    document.getElementById('lbl-tp2').innerText = manualTargets ? manualTargets.takeProfit2.toFixed(6) : '-';
+                    document.getElementById('box-entry').innerText = Number.isFinite(manualPosition.entry) && manualPosition.entry > 0 ? manualPosition.entry.toFixed(6) : '-';
+                    document.getElementById('box-sl').innerText = manualTargets ? manualTargets.stopLoss.toFixed(6) : '-';
+                    document.getElementById('box-tp1').innerText = manualTargets ? manualTargets.takeProfit1.toFixed(6) : '-';
+                    document.getElementById('box-tp2').innerText = manualTargets ? manualTargets.takeProfit2.toFixed(6) : '-';
                 } else {
                     if (coin.type === 'LONG') detailCard.classList.add('green-alert'); else detailCard.classList.add('red-alert');
                     const signal = coin.signal;
                     const signalTime = new Date(signal.candleTime).toLocaleString();
-                    document.getElementById('det-info-rows').innerHTML = '<div>Подтверждён по закрытой свече Bybit Perpetual 15м в ' + signalTime + '.</div><div>EMA ' + document.getElementById('input-ema1').value + ': ' + signal.fastEMA.toFixed(6) + ' | EMA ' + document.getElementById('input-ema2').value + ': ' + signal.slowEMA.toFixed(6) + ' | RSI(14): ' + signal.rsi.toFixed(1) + '.</div><div>Вход по цене закрытия свечи: <b>' + signal.entry.toFixed(6) + '</b>. Уровни рассчитаны по ATR(14), маржа по настройке: $' + marginUsdt + '.</div><div>Сигнал не гарантирует прибыль; проверь цену исполнения и риск перед сделкой.</div>';
-                    document.getElementById('lbl-sl').innerText = signal.stopLoss.toFixed(6); document.getElementById('lbl-entry').innerText = signal.entry.toFixed(6);
-                    document.getElementById('lbl-tp1').innerText = signal.takeProfit1.toFixed(6); document.getElementById('lbl-tp2').innerText = signal.takeProfit2.toFixed(6);
-                    document.getElementById('box-entry').innerText = signal.entry.toFixed(6);
-                    document.getElementById('box-sl').innerText = signal.stopLoss.toFixed(6); document.getElementById('box-tp1').innerText = signal.takeProfit1.toFixed(6); document.getElementById('box-tp2').innerText = signal.takeProfit2.toFixed(6);
+                    const takeProfits = calculateSignalTakeProfits(signal, coin.type);
+                    document.getElementById('input-signal-direction').value = coin.type;
+                    document.getElementById('input-signal-direction').disabled = true;
+                    signal.takeProfit1 = takeProfits ? takeProfits.takeProfit1 : NaN;
+                    signal.takeProfit2 = takeProfits ? takeProfits.takeProfit2 : NaN;
+                    const entryPrice = getSignalEntryPrice(signal);
+                    document.getElementById('input-signal-entry').disabled = false;
+                    document.getElementById('input-signal-tp1').disabled = false;
+                    document.getElementById('input-signal-tp2').disabled = false;
+                    document.getElementById('input-signal-sl').disabled = false;
+                    if (!preserveSignalPriceInputs) {
+                        document.getElementById('input-signal-entry').value = Number.isFinite(entryPrice) ? entryPrice : '';
+                        if (takeProfits) {
+                            document.getElementById('input-signal-tp1').value = takeProfits.takeProfit1;
+                            document.getElementById('input-signal-tp2').value = takeProfits.takeProfit2;
+                            document.getElementById('input-signal-sl').value = takeProfits.stopLoss;
+                        } else if (signal.manualTargetPrices) {
+                            document.getElementById('input-signal-tp1').value = signal.manualTargetPrices.takeProfit1;
+                            document.getElementById('input-signal-tp2').value = signal.manualTargetPrices.takeProfit2;
+                            document.getElementById('input-signal-sl').value = signal.manualTargetPrices.stopLoss;
+                        }
+                    }
+                    const profitEstimate = calculateSignalProfitEstimate(signal, coin.type);
+                    const selectedLeverage = Number(document.getElementById('input-signal-leverage').value);
+                    const stopLossRoiPercent = Number.isInteger(selectedLeverage) && selectedLeverage >= 1 && selectedLeverage <= 100
+                        && Number.isFinite(entryPrice)
+                        ? Math.abs(entryPrice - (takeProfits ? takeProfits.stopLoss : signal.stopLoss)) / entryPrice * selectedLeverage * 100
+                        : NaN;
+                    const leveragePlan = getLeverageRecommendation(
+                        coin,
+                        signal.atr / signal.entry * 100
+                    );
+                    const targetAdvice = takeProfits
+                        ? '<div><b>Уровни для настройки позиции:</b> TP1 <b>' + takeProfits.takeProfit1.toFixed(6) +
+                            '</b>, TP2 <b>' + takeProfits.takeProfit2.toFixed(6) + '</b>, SL <b>' +
+                            takeProfits.stopLoss.toFixed(6) + '</b>. При необходимости измени цены в полях выше.</div>'
+                        : '<div><b>Проверь TP/SL:</b> цены должны быть по правильную сторону от входа и в нужном порядке.</div>';
+                    const profitAdvice = profitEstimate.error
+                        ? '<div><b>Прибыль не рассчитана:</b> ' + profitEstimate.error + '</div>'
+                        : '<div>При марже $' + profitEstimate.margin.toFixed(2) + ' и плече ' + profitEstimate.leverage +
+                            '× (позиция ≈ $' + profitEstimate.notional.toFixed(2) +
+                            '): оценка при TP1 <b>+$' + profitEstimate.tp1Profit.toFixed(2) +
+                            '</b>, при TP2 <b>+$' + profitEstimate.tp2Profit.toFixed(2) +
+                            '</b>, при SL <b>' + (profitEstimate.slProfit < 0 ? '−$' : '+$') +
+                            Math.abs(profitEstimate.slProfit).toFixed(2) +
+                            '</b>, до комиссий и funding.</div>';
+                    const leverageAdvice = leveragePlan.error
+                        ? '<div><b>Заданное плечо:</b> ' + document.getElementById('input-signal-leverage').value +
+                            '×. Осторожный ориентир по ATR недоступен: ' + leveragePlan.error + '</div>'
+                        : '<div><b>Плечо для расчёта:</b> ' + document.getElementById('input-signal-leverage').value +
+                            '×. Осторожный ориентир по ATR: ' + leveragePlan.leverage + '× (твой диапазон ' +
+                            leveragePlan.minLeverage + '×–' + leveragePlan.maxLeverage + '×; ATR(14) ≈ ' +
+                            leveragePlan.volatilityPercent.toFixed(2) + '% за 15м). Это оценка волатильности, не расчёт ликвидации.</div>';
+                    document.getElementById('det-info-rows').innerHTML = '<div>Подтверждён по закрытой свече Bybit Perpetual 15м в ' + signalTime + '.</div><div>EMA ' + document.getElementById('input-ema1').value + ': ' + signal.fastEMA.toFixed(6) + ' | EMA ' + document.getElementById('input-ema2').value + ': ' + signal.slowEMA.toFixed(6) + ' | RSI(14): ' + signal.rsi.toFixed(1) + '.</div><div>Цена входа для расчёта: <b>' + (Number.isFinite(entryPrice) ? entryPrice.toFixed(6) : 'укажи цену из Bybit') + '</b>; начальный стоп рассчитан по ATR(14), поля можно менять.' +
+                        (Number.isFinite(stopLossRoiPercent) ? ' (примерно −' + stopLossRoiPercent.toFixed(1) + '% от маржи при ' + selectedLeverage + '×, до расходов).' : '.') +
+                        '</div>' + targetAdvice + profitAdvice + leverageAdvice + '<div>Это расчёт уровней, не гарантия исполнения. Плечо не меняется на Bybit; проверь ликвидацию, размер позиции, комиссии и funding.</div>';
+                    document.getElementById('lbl-sl').innerText = takeProfits ? takeProfits.stopLoss.toFixed(6) : '-'; document.getElementById('lbl-entry').innerText = Number.isFinite(entryPrice) ? entryPrice.toFixed(6) : '-';
+                    document.getElementById('lbl-tp1').innerText = takeProfits ? signal.takeProfit1.toFixed(6) : '-'; document.getElementById('lbl-tp2').innerText = takeProfits ? signal.takeProfit2.toFixed(6) : '-';
+                    document.getElementById('box-entry').innerText = Number.isFinite(entryPrice) ? entryPrice.toFixed(6) : '-';
+                    document.getElementById('box-sl').innerText = takeProfits ? takeProfits.stopLoss.toFixed(6) : '-'; document.getElementById('box-tp1').innerText = takeProfits ? signal.takeProfit1.toFixed(6) : '-'; document.getElementById('box-tp2').innerText = takeProfits ? signal.takeProfit2.toFixed(6) : '-';
                 }
             } else {
                 document.getElementById('slider-wrapper-zone').style.display = 'none'; document.getElementById('target-boxes-zone').style.display = 'none';
@@ -1172,31 +1497,38 @@
                     return;
                 }
                 if (!pair) return;
-                const plan = getArbTradePlan(pair);
-                if (!plan) {
-                    document.getElementById('det-name').innerText = coin.name + ' · настрой бюджет сделки';
+                const plan = getArbTradePlan(pair, coin);
+                if (!plan || plan.error) {
+                    const message = plan && plan.error ? plan.error : 'Не удалось рассчитать план.';
+                    document.getElementById('det-name').innerText = coin.name + ' · план пока недоступен';
                     document.getElementById('det-price').innerText = '+' + pair.spread.toFixed(2) + '%';
-                    document.getElementById('det-info-rows').innerHTML = '<div class="arb-status-card"><div class="arb-status-title">Укажи бюджет больше $0</div><div>План сделки будет рассчитан после ввода суммы в поле «Депозит, $».</div></div>';
+                    document.getElementById('det-info-rows').innerHTML = '<div class="arb-status-card"><div class="arb-status-title">Плечо пока не рекомендую</div><div>' +
+                        message + (Number.isFinite(coin.volatilityPercent)
+                            ? ' Текущая волатильность по ATR(14): ' + coin.volatilityPercent.toFixed(2) + '% за 15 минут.'
+                            : '') + '</div></div>';
                     document.getElementById('trade-scheme').style.display = 'none';
                     return;
                 }
                 const scheme = document.getElementById('trade-scheme');
                 scheme.style.display = 'block';
-                scheme.innerHTML = '<div class="trade-scheme-title">План сделки · общий бюджет $' + plan.budget.toFixed(2) + ' (ориентир без плеча)</div>' +
+                scheme.innerHTML = '<div class="trade-scheme-title">План сделки · общий бюджет $' + plan.budget.toFixed(2) + ' · расчётное плечо ' + plan.leverage +
+                    '× (диапазон ' + plan.leverageRange + ')</div>' +
                     '<div>1. <strong>Купить Spot на ' + pair.buyExchange + '</strong>: ' + formatAssetQuantity(plan.quantity) + ' ' + coin.name.split('/')[0] +
                     ' по ' + formatMarketPrice(pair.buyPrice) + ' ≈ <strong>$' + plan.spotAmount.toFixed(2) + '</strong>.</div>' +
                     '<div>2. <strong>Открыть Short Perpetual на ' + pair.sellExchange + '</strong>: ' + formatAssetQuantity(plan.quantity) + ' ' + coin.name.split('/')[0] +
-                    ' по ' + formatMarketPrice(pair.sellPrice) + ' ≈ <strong>$' + plan.perpetualAmount.toFixed(2) + '</strong> номинала.</div>' +
+                    ' по ' + formatMarketPrice(pair.sellPrice) + ' ≈ <strong>$' + plan.perpetualAmount.toFixed(2) + '</strong> номинала; расчётная маржа ≈ <strong>$' +
+                    plan.perpetualMargin.toFixed(2) + '</strong>.</div>' +
                     '<div>Если цены сойдутся к середине <strong>' + formatMarketPrice(plan.convergencePrice) + '</strong>: Spot ≈ <strong>+$' + plan.spotProfit.toFixed(4) +
                     '</strong>, Short ≈ <strong>+$' + plan.perpetualProfit.toFixed(4) + '</strong>, всего ≈ <strong>+$' + plan.expectedProfit.toFixed(4) +
                     '</strong> до комиссий, funding и проскальзывания.</div>' +
-                    '<div>Это оценка по последним ценам, не bid/ask стакана. Реальный результат может быть меньше или отрицательным; проверь ликвидность, комиссии и funding. Для фьючерса нужна отдельная маржа на ' + pair.sellExchange + '; плечо уменьшает маржу, но повышает риск.</div>';
+                    '<div>Эвристика плеча по ATR(14) 15м: при неблагоприятном движении в 3 ATR оно должно использовать не более примерно 25% начальной маржи; результат ограничен указанным диапазоном. Это не расчёт цены ликвидации: биржа также учитывает поддерживающую маржу, режим позиции и комиссии. Цены последние, не bid/ask. Реальный результат может быть меньше или отрицательным. Бот не меняет плечо и не размещает ордера.</div>';
                 document.getElementById('det-name').innerText = coin.name + ' · ' + pair.buyExchange + ' BUY / ' + pair.sellExchange + ' SHORT';
                 document.getElementById('det-price').innerText = '+' + pair.spread.toFixed(2) + '%';
                 document.getElementById('det-info-rows').innerHTML = '<div>Спред по последним ценам: <b>' + pair.buyExchange + ' Spot ' + formatMarketPrice(pair.buyPrice) +
                     '</b> → <b>' + pair.sellExchange + ' Perpetual ' + formatMarketPrice(pair.sellPrice) + '</b> = <b>+' + pair.spread.toFixed(2) + '%</b>.</div>' +
                     '<div>В обеих ногах одинаковое количество: <b>' + formatAssetQuantity(plan.quantity) + ' ' + coin.name.split('/')[0] +
-                    '</b>. Оценка валового результата при схождении к середине: <b>+$' + plan.expectedProfit.toFixed(4) + '</b>.</div>' +
+                    '</b>. Плечо Short: <b>' + plan.leverage + '×</b>; оценочная маржа: <b>$' + plan.perpetualMargin.toFixed(2) +
+                    '</b>. Валовая оценка при схождении: <b>+$' + plan.expectedProfit.toFixed(4) + '</b>.</div>' +
                     '<div>Бот не размещает ордера. Перед сделкой проверь текущие цены исполнения и наличие средств на обеих биржах.</div>';
             }
         }
@@ -1226,10 +1558,10 @@
                     if (log && Math.random() > 0.95) {
                         const time = new Date().toLocaleTimeString();
                         const pair = getArbPair(c);
-                        const plan = pair && getArbTradePlan(pair);
-                        if (plan) log.innerHTML = '<div style="color:#f59e0b;">[' + time + '] BUY SPOT $' + plan.spotAmount.toFixed(2) + ' on ' + pair.buyExchange +
+                        const plan = pair && getArbTradePlan(pair, c);
+                        if (plan && !plan.error) log.innerHTML = '<div style="color:#f59e0b;">[' + time + '] BUY SPOT $' + plan.spotAmount.toFixed(2) + ' on ' + pair.buyExchange +
                             ' / SHORT PERP $' + plan.perpetualAmount.toFixed(2) + ' on ' + pair.sellExchange + ' • ' + c.name +
-                            ' gross ~+$' + plan.expectedProfit.toFixed(4) + ' before costs</div>' + log.innerHTML;
+                            ' ' + plan.leverage + 'x • gross ~+$' + plan.expectedProfit.toFixed(4) + ' before costs</div>' + log.innerHTML;
                     }
                 }
             });
@@ -1256,6 +1588,10 @@
             if(localStorage.getItem('bot_risk')) document.getElementById('input-risk').value = localStorage.getItem('bot_risk');
             if(localStorage.getItem('bot_ema1')) document.getElementById('input-ema1').value = localStorage.getItem('bot_ema1');
             if(localStorage.getItem('bot_ema2')) document.getElementById('input-ema2').value = localStorage.getItem('bot_ema2');
+            if(localStorage.getItem('bot_leverage_min')) document.getElementById('input-leverage-min').value = localStorage.getItem('bot_leverage_min');
+            if(localStorage.getItem('bot_leverage_max')) document.getElementById('input-leverage-max').value = localStorage.getItem('bot_leverage_max');
+            if(localStorage.getItem('bot_signal_leverage')) document.getElementById('input-signal-leverage').value = localStorage.getItem('bot_signal_leverage');
+            if(localStorage.getItem('bot_signal_margin')) document.getElementById('input-signal-margin').value = localStorage.getItem('bot_signal_margin');
             switchMode('signals'); loadInitialPrices();
         };
     </script>
