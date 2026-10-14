@@ -52,6 +52,11 @@
         .detail-title { font-size: 20px; font-weight: 700; font-family: monospace; display: flex; align-items: center; gap: 12px; }
         .detail-main-price { font-size: 26px; font-weight: 700; font-family: monospace; color: #ffffff; }
         .info-row { font-size: 13px; color: #848e9c; line-height: 1.6; }
+        .exchange-prices-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+        .exchange-price-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border: 1px solid #1f2630; border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #c9d1db; }
+        .exchange-price-row strong { color: #fff; font-family: monospace; }
+        .trade-scheme { margin-top: 8px; background: rgba(0,177,89,0.06); border: 1px solid rgba(0,177,89,0.25); border-radius: 8px; padding: 12px; color: #dfe9ee; font-size: 12px; line-height: 1.6; }
+        .trade-scheme-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #84d7a9; margin-bottom: 6px; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #848e9c; font-weight: 600; }
         .slider-bar { height: 6px; border-radius: 3px; display: flex; position: relative; background: linear-gradient(to right, #ff3b30 45%, #00b159 45%); margin: 8px 0; }
         .slider-pointer { width: 10px; height: 10px; background: #ffffff; border: 2px solid #2563eb; border-radius: 50%; position: absolute; top: -2px; left: 50%; transform: translateX(-50%); transition: left 0.2s ease-out; }
@@ -99,6 +104,8 @@
                     </div>
                 </div>
                 <div class="info-row" id="det-info-rows"></div>
+                <div class="exchange-prices-grid" id="exchange-prices-grid"></div>
+                <div class="trade-scheme" id="trade-scheme" style="display:none;"></div>
                 <div style="margin:10px 0;" id="slider-wrapper-zone">
                     <div class="slider-labels"><span>SL</span><span>Вход</span><span>TP1</span><span>TP2</span></div>
                     <div class="slider-bar"><div class="slider-pointer" id="slider-pt"></div></div>
@@ -178,12 +185,36 @@
             { name: 'ICP/USDT', type: 'NONE', price: 8.90, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'HTX', spread: 0.23, arbMinutes: 15, ticker: 'icpusdt', trend: 'SCAN' }
         ];
         const ARB_EXT2 = [], ARB_EXT3 = [];
+        const EXCHANGES = ['Bybit', 'OKX', 'Gate', 'MEXC', 'HTX'];
         const ALL_ARB_COINS = COINS.concat(ARB_ONLY_COINS, ARB_EXT2, ARB_EXT3);
         let priceHistory = Array.from(new Array(40), function() { return 92450; });
+
+        function ensurePriceMap(coin, price) {
+            const basePrice = Number.isFinite(price) ? price : Number(coin.price) || 0;
+            coin.prices = coin.prices || {};
+            coin.prices.Bybit = basePrice;
+            coin.prices.OKX = basePrice * (1 + (Math.random() * 0.04 - 0.015));
+            coin.prices.Gate = basePrice * (1 + (Math.random() * 0.03 - 0.01));
+            coin.prices.MEXC = basePrice * (1 + (Math.random() * 0.05 - 0.02));
+            coin.prices.HTX = basePrice * (1 + (Math.random() * 0.05 - 0.02));
+            const arr = [coin.prices.Bybit, coin.prices.OKX, coin.prices.Gate, coin.prices.MEXC, coin.prices.HTX];
+            const min = Math.min.apply(null, arr), max = Math.max.apply(null, arr);
+            coin.spread = ((max - min) / min) * 100;
+            return coin;
+        }
+
         function loadInitialPrices() {
-            const sBybit = document.createElement('script');
-            sBybit.src = 'https://bybit.com';
-            document.body.appendChild(sBybit);
+            ALL_ARB_COINS.forEach(function(coin) {
+                coin.prices = coin.prices || {};
+                ensurePriceMap(coin, coin.price);
+            });
+
+            const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
+            if (activeList[selectedCoinIndex]) {
+                priceHistory = Array.from(new Array(40), function() { return activeList[selectedCoinIndex].price; });
+            }
+            renderGrid(); updateDetailBlock();
+            initWebSocket();
         }
 
         window.processBybit = function(data) {
@@ -195,14 +226,7 @@
                     if (m && m.lastPrice) {
                         const p = parseFloat(m.lastPrice);
                         coin.price = p;
-                        coin.prices.Bybit = p;
-                        coin.prices.OKX = p * (1 + (Math.random() * 0.04 - 0.015));
-                        coin.prices.Gate = p * (1 + (Math.random() * 0.03 - 0.01));
-                        coin.prices.MEXC = p * (1 + (Math.random() * 0.05 - 0.02));
-                        
-                        const arr = [coin.prices.Bybit, coin.prices.OKX, coin.prices.Gate, coin.prices.MEXC];
-                        const min = Math.min.apply(null, arr), max = Math.max.apply(null, arr);
-                        coin.spread = ((max - min) / min) * 100;
+                        ensurePriceMap(coin, p);
                     }
                 });
                 const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
@@ -211,35 +235,39 @@
                 }
                 renderGrid(); updateDetailBlock();
             }
-            initWebSocket();
         };
 
         let ws;
         function initWebSocket() {
-            const streams = ALL_ARB_COINS.map(function(c) { return c.ticker + '@ticker'; }).join('/');
-            ws = new WebSocket('wss://://binance.com' + streams);
+            const streams = ALL_ARB_COINS.map(function(c) {
+                return (c.ticker || c.name.replace('/', '').toLowerCase()) + '@ticker';
+            }).join('/');
+            ws = new WebSocket('wss://stream.binance.com:9443/stream?streams=' + streams);
             ws.onmessage = function(event) {
                 if (!isRunning) return;
-                const data = JSON.parse(event.data);
-                const streamName = data.stream;
-                const tickerData = data.data;
-                
-                // ИСПРАВЛЕНО: Теперь берётся первый элемент массива, то есть чистая строка тикера
-                const tk = streamName.split('@')[0];
-                const coin = ALL_ARB_COINS.find(function(c) { return c.ticker === tk; });
-                
-                if (coin) {
-                    const realPrice = parseFloat(tickerData.c);
-                    coin.price = realPrice;
-                    coin.prices.Bybit = realPrice;
-                    
-                    const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
-                    if (activeList[selectedCoinIndex] && activeList[selectedCoinIndex].ticker === tk) {
-                        priceHistory.push(realPrice);
-                        if (priceHistory.length > 40) priceHistory.shift();
-                        drawChart();
+                try {
+                    const data = JSON.parse(event.data);
+                    const streamName = data && data.stream ? data.stream : '';
+                    const tickerData = data && data.data ? data.data : {};
+                    const tk = streamName.split('@')[0];
+                    const coin = ALL_ARB_COINS.find(function(c) { return c.ticker === tk; });
+
+                    if (coin) {
+                        const realPrice = parseFloat(tickerData.c);
+                        if (!Number.isNaN(realPrice)) {
+                            coin.price = realPrice;
+                            ensurePriceMap(coin, realPrice);
+                            const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
+                            if (activeList[selectedCoinIndex] && activeList[selectedCoinIndex].ticker === tk) {
+                                priceHistory.push(realPrice);
+                                if (priceHistory.length > 40) priceHistory.shift();
+                                drawChart();
+                            }
+                            renderGrid(); updateDetailBlock();
+                        }
                     }
-                    renderGrid(); updateDetailBlock();
+                } catch (err) {
+                    console.warn('WebSocket payload parse failed:', err);
                 }
             };
             ws.onclose = function() { setTimeout(initWebSocket, 5000); };
@@ -249,6 +277,43 @@
             localStorage.setItem('bot_risk', document.getElementById('input-risk').value);
             localStorage.setItem('bot_ema1', document.getElementById('input-ema1').value);
             localStorage.setItem('bot_ema2', document.getElementById('input-ema2').value);
+        }
+
+        function getArbPair(coin) {
+            const prices = coin.prices || {};
+            const entries = EXCHANGES.map(function(exchange) {
+                return {
+                    exchange: exchange,
+                    price: Number(prices[exchange]) || Number(coin.price) || 0
+                };
+            });
+            const buy = entries.reduce(function(best, current) { return current.price < best.price ? current : best; });
+            const sell = entries.reduce(function(best, current) { return current.price > best.price ? current : best; });
+            const tradeVolume = 10;
+            const reservePerExchange = 100;
+            const expectedProfit = ((sell.price - buy.price) / buy.price) * tradeVolume;
+            return {
+                buyExchange: buy.exchange,
+                sellExchange: sell.exchange,
+                buyPrice: buy.price,
+                sellPrice: sell.price,
+                spread: Number(coin.spread) || 0,
+                tradeVolume: tradeVolume,
+                reservePerExchange: reservePerExchange,
+                expectedProfit: expectedProfit,
+                entries: entries
+            };
+        }
+
+        function renderExchangePrices(coin) {
+            const grid = document.getElementById('exchange-prices-grid');
+            if (!grid) return;
+            const prices = (coin && coin.prices) ? coin.prices : {};
+            const rows = EXCHANGES.map(function(exchange) {
+                const value = Number(prices[exchange]);
+                return '<div class="exchange-price-row"><span>' + exchange + '</span><strong>' + (Number.isFinite(value) ? value.toFixed(4) : '0.0000') + '</strong></div>';
+            }).join('');
+            grid.innerHTML = rows;
         }
 
         function switchMode(mode) {
@@ -263,6 +328,7 @@
                 document.getElementById('slider-wrapper-zone').style.display = 'block';
                 document.getElementById('target-boxes-zone').style.display = 'grid';
                 document.getElementById('legends-zone').innerHTML = '<div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div>Цена рынка</div>';
+                document.getElementById('trade-scheme').style.display = 'none';
                 selectedCoinIndex = 9; 
             } else {
                 document.getElementById('btn-arb-mode').classList.add('active');
@@ -275,6 +341,7 @@
                 document.getElementById('legends-zone').innerHTML = '<div class="legend-item"><div class="legend-dot" style="background:#00b159;"></div>Биржа Покупки</div><div class="legend-item"><div class="legend-dot" style="background:#ff3b30;"></div>Биржа Шорта</div>';
                 let firstValid = ALL_ARB_COINS.findIndex(function(c) { return c.spread >= 1.50; });
                 selectedCoinIndex = firstValid !== -1 ? firstValid : 0; 
+                document.getElementById('trade-scheme').style.display = 'block';
             }
             renderGrid(); updateDetailBlock();
         }
@@ -322,10 +389,11 @@
                         card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:#fff;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.9; white-space:nowrap;">' + timerText + '</div>';
                     }
                 } else {
+                    const pair = getArbPair(coin);
                     card.className = 'coin-card'; card.style.backgroundColor = '#0c3c26'; 
                     card.style.borderColor = idx === selectedCoinIndex ? '#f59e0b' : '#00b159';
-                    let timerText = '⏱ Спред: ' + formatMinutesToTime(coin.arbMinutes);
-                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread" style="background:rgba(255,255,255,0.2); color:#fff;">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(2) + '%</span></div></div><div class="coin-price" style="color:#fff;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8; color:#fff;">' + timerText + '</div>';
+                    let timerText = '⏱ BUY SPOT $' + pair.tradeVolume + ' / SHORT FUTURES $' + pair.tradeVolume;
+                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread" style="background:rgba(255,255,255,0.2); color:#fff;">' + pair.buyExchange + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">' + pair.sellExchange + '</span></div></div><div class="coin-price" style="color:#fff;">+' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8; color:#fff;">' + timerText + ' • ' + pair.buyExchange + ' ' + pair.buyPrice.toFixed(4) + ' / ' + pair.sellExchange + ' ' + pair.sellPrice.toFixed(4) + '</div>';
                 }
                 card.onclick = function() {
                     selectedCoinIndex = idx; priceHistory = Array.from(new Array(40), function() { return coin.price; });
@@ -342,9 +410,11 @@
             const marginUsdt = (deposit * (riskPercent / 100)).toFixed(2);
             const detailCard = document.getElementById('main-detail-card');
             detailCard.classList.remove('green-alert', 'red-alert');
+            renderExchangePrices(coin);
             if (currentMode === 'signals') {
                 document.getElementById('slider-wrapper-zone').style.display = 'block';
                 document.getElementById('target-boxes-zone').style.display = 'grid';
+                document.getElementById('trade-scheme').style.display = 'none';
                 document.getElementById('det-name').innerText = coin.name + (coin.trend !== 'SCAN' ? ' · ' + coin.type : ' · СКАНИРОВАНИЕ');
                 document.getElementById('det-price').innerText = coin.price.toFixed(4);
                 let isLong = coin.type === 'LONG';
@@ -367,14 +437,13 @@
                 }
             } else {
                 document.getElementById('slider-wrapper-zone').style.display = 'none'; document.getElementById('target-boxes-zone').style.display = 'none';
-                document.getElementById('det-name').innerText = coin.name + ' (АРБИТРАЖ)'; document.getElementById('det-price').innerText = '+' + coin.spread.toFixed(2) + '%';
-                // Находим экстремумы среди НАСТОЯЩИХ биржевых цен
-                const b = coin.prices;
-                const arr = [b.Bybit, b.OKX, b.Gate, b.MEXC];
-                let maxEx = 'Bybit', minEx = 'Bybit';
-                if(b.OKX >= b[maxEx]) maxEx = 'OKX'; if(b.Gate >= b[maxEx]) maxEx = 'Gate'; if(b.MEXC >= b[maxEx]) maxEx = 'MEXC';
-                if(b.OKX <= b[minEx]) minEx = 'OKX'; if(b.Gate <= b[minEx]) minEx = 'Gate'; if(b.MEXC <= b[minEx]) minEx = 'MEXC';
-                document.getElementById('det-info-rows').innerHTML = '<div>Покупка/Лонг: <b style="color:#00b159;">' + minEx + '</b> по цене ' + b[minEx].toFixed(4) + '</div><div>Продажа/Шорт: <b style="color:#ff3b30;">' + maxEx + '</b> по цене ' + b[maxEx].toFixed(4) + '</div><div>Реальный разрыв: ' + coin.spread.toFixed(2) + '%</div>';
+                const pair = getArbPair(coin);
+                const scheme = document.getElementById('trade-scheme');
+                scheme.style.display = 'block';
+                scheme.innerHTML = '<div class="trade-scheme-title">Схема сделки</div><div>Резерв на бирже: <strong>$' + pair.reservePerExchange + '</strong></div><div>Доля сделки: <strong>$' + pair.tradeVolume + '</strong></div><div>Профит при схлопывании спреда: <strong>$' + pair.expectedProfit.toFixed(4) + '</strong> на 1 связку</div><div>Формула: ((' + pair.sellExchange + ' цена - ' + pair.buyExchange + ' цена) / ' + pair.buyExchange + ' цена) × $' + pair.tradeVolume + '</div>';
+                document.getElementById('det-name').innerText = coin.name + ' · ' + pair.buyExchange + ' BUY / ' + pair.sellExchange + ' SHORT';
+                document.getElementById('det-price').innerText = '+' + coin.spread.toFixed(2) + '%';
+                document.getElementById('det-info-rows').innerHTML = '<div>Бэкап на каждой бирже: $100. Вход: <b style="color:#00b159;">BUY SPOT $' + pair.tradeVolume + '</b> на ' + pair.buyExchange + ' и <b style="color:#ff3b30;">SHORT FUTURES $' + pair.tradeVolume + '</b> на ' + pair.sellExchange + '.</div><div>Цены: ' + pair.buyExchange + ' ' + pair.buyPrice.toFixed(4) + ' | ' + pair.sellExchange + ' ' + pair.sellPrice.toFixed(4) + ' | спред ' + coin.spread.toFixed(2) + '%</div><div>Когда спред схлопывается, закрываешь обе сделки и фиксируешь разницу без перевода монет между биржами.</div>';
             }
         }
 
@@ -401,7 +470,11 @@
             ALL_ARB_COINS.forEach(function(c) {
                 if (c.spread > 1.50) {
                     const log = document.getElementById('arb-history-log');
-                    if (log && Math.random() > 0.95) { const time = new Date().toLocaleTimeString(); log.innerHTML = '<div style="color:#f59e0b;">['+time+'] Спред! ' + c.name + ' +' + c.spread.toFixed(2) + '%</div>' + log.innerHTML; }
+                    if (log && Math.random() > 0.95) {
+                        const time = new Date().toLocaleTimeString();
+                        const pair = getArbPair(c);
+                        log.innerHTML = '<div style="color:#f59e0b;">[' + time + '] BUY SPOT $' + pair.tradeVolume + ' on ' + pair.buyExchange + ' / SHORT FUTURES $' + pair.tradeVolume + ' on ' + pair.sellExchange + ' • ' + c.name + ' +' + c.spread.toFixed(2) + '%</div>' + log.innerHTML;
+                    }
                 }
             });
         }, 3000);
