@@ -60,6 +60,17 @@
         .arb-status-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
         .trade-scheme { margin-top: 8px; background: rgba(0,177,89,0.06); border: 1px solid rgba(0,177,89,0.25); border-radius: 8px; padding: 12px; color: #dfe9ee; font-size: 12px; line-height: 1.6; }
         .trade-scheme-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #84d7a9; margin-bottom: 6px; }
+        .bybit-order-card { grid-column: 1 / -1; background: #0b0e11; border: 1px solid #2d3848; border-radius: 8px; padding: 12px; }
+        .bybit-order-header, .bybit-order-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .bybit-order-title { color: #fff; font-size: 13px; font-weight: 700; }
+        .bybit-order-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 8px; margin: 10px 0; }
+        .bybit-order-value { background: #161b22; border-radius: 6px; padding: 8px; min-width: 0; }
+        .bybit-order-label { color: #848e9c; font-size: 10px; margin-bottom: 4px; }
+        .bybit-order-number { color: #fff; font: 700 13px monospace; overflow-wrap: anywhere; }
+        .bybit-order-actions button, .bybit-order-actions a { border: 0; border-radius: 6px; padding: 8px 12px; color: #fff; background: #2563eb; font: inherit; font-size: 12px; font-weight: 700; text-decoration: none; cursor: pointer; }
+        .bybit-order-actions a { background: #1f2630; }
+        .bybit-order-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .bybit-order-note { color: #fbbf24; font-size: 11px; line-height: 1.5; margin-top: 8px; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #848e9c; font-weight: 600; }
         .slider-bar { height: 6px; border-radius: 3px; display: flex; position: relative; background: linear-gradient(to right, #ff3b30 45%, #00b159 45%); margin: 8px 0; }
         .slider-pointer { width: 10px; height: 10px; background: #ffffff; border: 2px solid #2563eb; border-radius: 50%; position: absolute; top: -2px; left: 50%; transform: translateX(-50%); transition: left 0.2s ease-out; }
@@ -126,7 +137,28 @@
                     <div class="form-group"><label>Тейк-профит 2 (TP2), цена</label><input type="number" id="input-signal-tp2" oninput="updateSignalPriceTargets();" min="0" step="any" placeholder="Цена TP2" disabled></div>
                     <div class="form-group"><label>Стоп-лосс (SL), цена</label><input type="number" id="input-signal-sl" oninput="updateSignalPriceTargets();" min="0" step="any" placeholder="Цена SL" disabled></div>
                     <div class="info-row" id="signal-pnl-estimate" style="grid-column:1/-1;">Оценка результата появится после активного сигнала.</div>
-                    <div class="info-row" style="grid-column:1/-1;">Выбери сторону позиции и введи фактическую цену входа, TP/SL как в Bybit. Для активного сигнала подставлю пример уровней: TP1 на расстоянии стопа, TP2 — вдвое дальше; их можно изменить. Без сигнала заполни все цены вручную. Суммы расчётные, до комиссий и funding; ордера сайт не размещает и не меняет.</div>
+                    <div class="bybit-order-card" id="bybit-order-card">
+                        <div class="bybit-order-header">
+                            <div class="bybit-order-title">Что перенести в Bybit</div>
+                            <div class="bybit-order-title" id="bybit-order-symbol">—</div>
+                        </div>
+                        <div class="bybit-order-grid">
+                            <div class="bybit-order-value"><div class="bybit-order-label">Сторона</div><div class="bybit-order-number" id="bybit-order-side">—</div></div>
+                            <div class="bybit-order-value"><div class="bybit-order-label">Плечо</div><div class="bybit-order-number" id="bybit-order-leverage">—</div></div>
+                            <div class="bybit-order-value"><div class="bybit-order-label">В поле «Стоимость» · USDT</div><div class="bybit-order-number" id="bybit-order-margin">—</div></div>
+                            <div class="bybit-order-value"><div class="bybit-order-label">Номинал позиции · USDT</div><div class="bybit-order-number" id="bybit-order-notional">—</div></div>
+                            <div class="bybit-order-value"><div class="bybit-order-label">Количество · монет, ориентир</div><div class="bybit-order-number" id="bybit-order-quantity">—</div></div>
+                            <div class="bybit-order-value"><div class="bybit-order-label">Цена входа / лимитная цена</div><div class="bybit-order-number" id="bybit-order-entry">—</div></div>
+                            <div class="bybit-order-value"><div class="bybit-order-label">Take-profit · TP</div><div class="bybit-order-number" id="bybit-order-tp">—</div></div>
+                            <div class="bybit-order-value"><div class="bybit-order-label">Stop-loss · SL</div><div class="bybit-order-number" id="bybit-order-sl">—</div></div>
+                        </div>
+                        <div class="bybit-order-actions">
+                            <button type="button" id="bybit-order-copy" onclick="copyBybitOrderDetails();" disabled>Скопировать параметры</button>
+                            <a id="bybit-order-link" href="https://www.bybit.com/trade/usdt/BTCUSDT" target="_blank" rel="noopener noreferrer">Открыть пару в Bybit ↗</a>
+                        </div>
+                        <div class="bybit-order-note">Количество рассчитано приблизительно: проверь шаг количества, режим маржи и текущую цену в Bybit. Это подсказка для ручного ввода; сайт не открывает и не подтверждает ордера.</div>
+                    </div>
+                    <div class="info-row" style="grid-column:1/-1;">Выбери сторону позиции и введи фактическую цену входа, TP/SL как в Bybit. Для активного сигнала подставлю пример уровней: TP1 на расстоянии стопа, TP2 — вдвое дальше; их можно изменить. Панель выше подготовит значения для формы Bybit; без активного сигнала заполни цены вручную. Суммы расчётные, до комиссий и funding; ордера сайт не размещает и не меняет.</div>
                 </div>
                 <div style="margin:10px 0;" id="slider-wrapper-zone">
                     <div class="slider-labels"><span>SL</span><span>Вход</span><span>TP1</span><span>TP2</span></div>
@@ -776,6 +808,7 @@
                 }
             };
             const estimate = calculateSignalProfitEstimate(signal, direction);
+            renderBybitOrderDraft(coin, direction, estimate);
             if (estimate.error) {
                 output.innerText = activeSignal
                     ? estimate.error
@@ -1238,6 +1271,78 @@
         function formatAssetQuantity(quantity) {
             const fixed = quantity.toFixed(6);
             return fixed.indexOf('.') === -1 ? fixed : fixed.replace(/0+$/, '').replace(/\.$/, '');
+        }
+
+        function formatOrderNumber(value) {
+            return Number.isFinite(value)
+                ? new Intl.NumberFormat('en-US', { useGrouping: false, maximumSignificantDigits: 12 }).format(value)
+                : '—';
+        }
+
+        function renderBybitOrderDraft(coin, direction, estimate) {
+            const symbol = coin
+                ? (coin.bybitSignalSymbol || coin.name.replace('/', '')).toUpperCase()
+                : '';
+            const valid = Boolean(estimate && !estimate.error);
+            const values = {
+                'bybit-order-symbol': symbol || '—',
+                'bybit-order-side': direction === 'LONG' ? 'Лонг · Buy' : 'Шорт · Sell',
+                'bybit-order-leverage': document.getElementById('input-signal-leverage').value + '×',
+                'bybit-order-margin': formatOrderNumber(Number(document.getElementById('input-signal-margin').value)),
+                'bybit-order-notional': valid ? formatOrderNumber(estimate.notional) : '—',
+                'bybit-order-quantity': valid ? formatOrderNumber(estimate.quantity) : '—',
+                'bybit-order-entry': valid ? formatOrderNumber(estimate.entry) : '—',
+                'bybit-order-tp': valid ? formatOrderNumber(estimate.targets.takeProfit1) : '—',
+                'bybit-order-sl': valid ? formatOrderNumber(estimate.targets.stopLoss) : '—'
+            };
+            Object.keys(values).forEach(function(id) {
+                document.getElementById(id).innerText = values[id];
+            });
+            document.getElementById('bybit-order-copy').disabled = !valid;
+            if (symbol) {
+                document.getElementById('bybit-order-link').href =
+                    'https://www.bybit.com/trade/usdt/' + encodeURIComponent(symbol);
+            }
+        }
+
+        async function copyBybitOrderDetails() {
+            const rows = [
+                ['Инструмент', 'bybit-order-symbol'],
+                ['Сторона', 'bybit-order-side'],
+                ['Плечо', 'bybit-order-leverage'],
+                ['Стоимость / маржа, USDT', 'bybit-order-margin'],
+                ['Номинал позиции, USDT', 'bybit-order-notional'],
+                ['Количество, монет (ориентир)', 'bybit-order-quantity'],
+                ['Цена входа', 'bybit-order-entry'],
+                ['Take-profit', 'bybit-order-tp'],
+                ['Stop-loss', 'bybit-order-sl']
+            ];
+            const text = rows.map(function(row) {
+                return row[0] + ': ' + document.getElementById(row[1]).innerText;
+            }).join('\n');
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    let copied;
+                    try {
+                        copied = document.execCommand('copy');
+                    } finally {
+                        textarea.remove();
+                    }
+                    if (!copied) throw new Error('Браузер не разрешил копирование.');
+                }
+                showToast('Параметры сделки скопированы', true);
+            } catch (error) {
+                console.error('Не удалось скопировать параметры Bybit:', error);
+                showToast('Не удалось скопировать. Проверь разрешение браузера.', false);
+            }
         }
 
         function renderExchangePrices(coin) {
