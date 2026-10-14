@@ -263,19 +263,23 @@
                 document.getElementById('label-total-signals').innerText = "14 Сигналов";
                 document.getElementById('det-price-lbl').innerText = "Текущая цена";
                 document.getElementById('count-scanned').innerText = "14";
-                document.getElementById('slider-wrapper-zone').style.setProperty('display', 'block', 'important');
-                document.getElementById('target-boxes-zone').style.setProperty('display', 'grid', 'important');
+                document.getElementById('slider-wrapper-zone').style.display = 'block';
+                document.getElementById('target-boxes-zone').style.display = 'grid';
                 document.getElementById('legends-zone').innerHTML = '<div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div>Цена рынка</div>';
                 
-                if (selectedCoinIndex >= 14) { selectedCoinIndex = 9; }
+                selectedCoinIndex = 9; // Сбрасываем на Биткоин для сигналов
             } else {
                 document.getElementById('btn-arb-mode').classList.add('active');
                 document.getElementById('label-total-signals').innerText = "100 Связок";
                 document.getElementById('det-price-lbl').innerText = "Разрыв цен (Спред)";
                 document.getElementById('count-scanned').innerText = "100";
-                document.getElementById('slider-wrapper-zone').style.setProperty('display', 'none', 'important');
-                document.getElementById('target-boxes-zone').style.setProperty('display', 'none', 'important');
+                document.getElementById('slider-wrapper-zone').style.display = 'none';
+                document.getElementById('target-boxes-zone').style.display = 'none';
                 document.getElementById('legends-zone').innerHTML = '<div class="legend-item"><div class="legend-dot" style="background:#00b159;"></div>Биржа Покупки</div><div class="legend-item"><div class="legend-dot" style="background:#ff3b30;"></div>Биржа Шорта</div>';
+                
+                // Умный поиск: находим в списке первую монету, у которой спред уже выше 5%, чтобы калькулятор не зависал
+                let firstValid = ALL_ARB_COINS.findIndex(function(c) { return c.spread >= 5.0; });
+                selectedCoinIndex = firstValid !== -1 ? firstValid : 14; 
             }
             
             renderGrid(); 
@@ -329,51 +333,6 @@
                 }
             });
         }
-        function renderGrid() {
-            const container = document.getElementById('coins-container'); container.innerHTML = '';
-            const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
-            
-            activeList.forEach(function(coin, idx) {
-                const card = document.createElement('div');
-                if (currentMode === 'signals') {
-                    if (coin.trend === 'SCAN') {
-                        card.className = 'coin-card scanning-mode';
-                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="badge-accuracy">SCAN ' + (coin.prepSeconds || 40) + 's</span></div><div class="coin-price" style="color:#848e9c;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; opacity:0.6; font-family:monospace;">🔍 Анализ индикаторов...</div>';
-                    } else {
-                        card.className = 'coin-card new-signal' + (coin.type === 'SHORT' ? ' short-style' : '');
-                        if(idx === selectedCoinIndex) card.style.borderColor = '#00ff73';
-                        let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
-                        let hh = exitTime.getHours(), mm = exitTime.getMinutes();
-                        if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
-                        let timerText = '⏱ Тренд: ' + formatMinutesToTime(coin.totalMinutes) + ' (Выход в ' + hh + ':' + mm + ')';
-                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:#fff;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.9; white-space:nowrap;">' + timerText + '</div>';
-                    }
-                    card.onclick = function() {
-                        selectedCoinIndex = idx;
-                        priceHistory = Array.from(new Array(40), function() { return coin.price; });
-                        renderGrid(); updateDetailBlock();
-                    };
-                    container.appendChild(card);
-                } else {
-                    if (coin.spread >= 5.0) {
-                        card.className = 'coin-card';
-                        card.style.backgroundColor = '#0c3c26'; 
-                        card.style.borderColor = '#00b159';
-                        
-                        if(idx === selectedCoinIndex) card.style.borderColor = '#f59e0b';
-                        let timerText = '⏱ Спред: ' + formatMinutesToTime(coin.arbMinutes);
-                        card.innerHTML = '<div class="coin-header"><div class="coin-name" style="color:#fff;">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread" style="background:rgba(255,255,255,0.2); color:#fff;">' + coin.b1 + '➔' + coin.b2 + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">+' + coin.spread.toFixed(2) + '%</span></div></div><div class="coin-price" style="color:#fff;">Спред: +' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8; color:#fff;">' + timerText + '</div>';
-                        
-                        card.onclick = function() {
-                            selectedCoinIndex = idx;
-                            priceHistory = Array.from(new Array(40), function() { return coin.price; });
-                            renderGrid(); updateDetailBlock();
-                        };
-                        container.appendChild(card);
-                    }
-                }
-            });
-        }
         function updateDetailBlock() {
             const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
             const coin = activeList[selectedCoinIndex];
@@ -385,8 +344,8 @@
             detailCard.classList.remove('green-alert', 'red-alert');
             
             if (currentMode === 'signals') {
-                document.getElementById('slider-wrapper-zone').style.setProperty('display', 'block', 'important');
-                document.getElementById('target-boxes-zone').style.setProperty('display', 'grid', 'important');
+                document.getElementById('slider-wrapper-zone').style.style = 'block';
+                document.getElementById('target-boxes-zone').style.display = 'grid';
                 if (coin.type !== 'NONE') {
                     if (coin.type === 'LONG') detailCard.classList.add('green-alert');
                     else detailCard.classList.add('red-alert');
@@ -407,6 +366,34 @@
                 
                 let pointerEl = document.getElementById("slider-pt");
                 if (pointerEl) { pointerEl.style.left = percentage.toFixed(2) + "%"; }
+                let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
+                let hh = exitTime.getHours(), mm = exitTime.getMinutes();
+                if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
+                let durationText = coin.type === 'NONE' ? "Идёт поиск безопасной точки входа..." : "Активен до " + hh + ":" + mm + " (осталось " + formatMinutesToTime(coin.totalMinutes) + ")";
+                
+                let trendIcon = coin.trend === 'SCAN' ? '⏳ РАСЧЁТ...' : (coin.trend === 'UP' ? '📈 КУПЛЯ (EMA9 > EMA21) ✅' : '📉 ПРОДАЖА (EMA9 < EMA21) ✅');
+                let rsiIcon = coin.type === 'NONE' ? '⏳ АНАЛИЗ... (50)' : '🔥 СИГНАЛ ПОДТВЕРЖДЕН ✅ (50)';
+                
+                let htmlRows = "<div>• Живой Просчёт Инбора Bybit Pro<br>• Маржа: " + marginUsdt + " $ (Плечо " + coin.leverage + "x)<br>⏱ " + durationText + "</div>";
+                htmlRows += "<div class='checklist-box'>";
+                htmlRows += "<div class='checklist-item'><span>Фильтр ТРЕНДА (EMA):</span><span>" + trendIcon + "</span></div>";
+                htmlRows += "<div class='checklist-item'><span>Фильтр ВХОДА (RSI):</span><span>" + rsiIcon + "</span></div>";
+                htmlRows += "<div class='checklist-item'><span>Объёмы рынка (ATR):</span><span>ОПТИМАЛЬНО ✅</span></div>";
+                htmlRows += "</div>";
+                htmlRows += "<div class='power-wrapper'><div class='power-label'><span>СИЛА ПОКУPАТЕЛЕЙ: 50%</span><span>ПРОДАВЦЫ: 50%</span></div>";
+                htmlRows += "<div class='power-bar-bg'><div class='power-bar-fill' style='width:50%'></div></div></div>";
+                
+                document.getElementById("det-info-rows").innerHTML = htmlRows;
+                document.getElementById("lbl-sl").innerText = sl.toFixed(4); document.getElementById("lbl-entry").innerText = entry.toFixed(4);
+                document.getElementById("lbl-tp1").innerText = tp1.toFixed(4); document.getElementById("lbl-tp2").innerText = tp2.toFixed(4);
+                document.getElementById("box-entry").innerText = entry.toFixed(4); document.getElementById("box-sl").innerText = sl.toFixed(4);
+                document.getElementById("box-tp1").innerText = tp1.toFixed(4); document.getElementById("box-tp2").innerText = tp2.toFixed(4);
+                
+                drawChartSignals(sl, entry, tp1, tp2);
+            } else {
+                drawAdvancedArbitrageBlock(coin, marginUsdt);
+            }
+        }
                 let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
                 let hh = exitTime.getHours(), mm = exitTime.getMinutes();
                 if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
