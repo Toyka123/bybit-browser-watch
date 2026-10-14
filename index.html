@@ -147,6 +147,7 @@
             <div class="stat-card signal-mode-only"><div class="stat-title">Неоднозначные свечи</div><div class="stat-value" id="signal-outcome-ambiguous">0</div></div>
             <div class="stat-card signal-mode-only"><div class="stat-title">Правило входа</div><div class="stat-value" style="font-size:16px;">EMA + RSI</div></div>
             <div class="stat-card signal-mode-only"><div class="stat-title">Источник / интервал</div><div class="stat-value" id="signal-timeframe-label" style="font-size:16px;">Bybit Perpetual · 15м</div></div>
+            <div class="stat-card signal-mode-only"><div class="stat-title" id="first-signal-today-title">Первый сигнал сегодня · 15м</div><div class="stat-value" id="first-signal-today" style="font-size:16px;">Пока нет</div></div>
         </section>
         <section class="signal-history-panel signal-mode-only">
             <h3>Сравнение на истории · последние 100 закрытых свечей</h3>
@@ -880,6 +881,25 @@
             document.getElementById('signal-outcome-pending').innerText = String(pendingRecords.length);
             document.getElementById('signal-outcome-ambiguous').innerText = String(state.totals.ambiguous);
             document.getElementById('signal-outcome-reset').innerText = 'Сбросить статистику ' + timeframe;
+            document.getElementById('first-signal-today-title').innerText =
+                'Первый сигнал сегодня · ' + (timeframe === '5m' ? '5м' : '15м');
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const firstSignalToday = state.records
+                .map(function(record) {
+                    return {
+                        record: record,
+                        timestamp: Number.isFinite(record.detectedAt) ? record.detectedAt : record.signalAt
+                    };
+                })
+                .filter(function(item) {
+                    return item.timestamp >= todayStart.getTime() && item.timestamp <= Date.now();
+                })
+                .sort(function(first, second) { return first.timestamp - second.timestamp; })[0];
+            document.getElementById('first-signal-today').innerText = firstSignalToday
+                ? new Date(firstSignalToday.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) +
+                    ' · ' + firstSignalToday.record.symbol + ' ' + firstSignalToday.record.side
+                : 'Пока нет';
             document.getElementById('signal-outcome-status').innerText = state.warning ||
                 'Сигналы и статистика ' + timeframe + ' сохраняются отдельно. Проверка идёт по закрытым свечам ' +
                 timeframe + '; если TP1 и SL попали в одну свечу, порядок неизвестен и результат неоднозначный. ' +
@@ -1064,6 +1084,7 @@
                         takeProfit2: targets.takeProfit2,
                         stopLoss: targets.stopLoss,
                         signalAt: candles[candles.length - 1].closeTime,
+                        detectedAt: Date.now(),
                         outcome: 'pending'
                     });
                     changed = true;
