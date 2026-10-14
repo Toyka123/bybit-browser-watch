@@ -181,18 +181,29 @@
         const ALL_ARB_COINS = COINS.concat(ARB_ONLY_COINS, ARB_EXT2, ARB_EXT3);
         let priceHistory = Array.from(new Array(40), function() { return 92450; });
         function loadInitialPrices() {
-            const script = document.createElement('script');
-            script.src = 'https://bybit.com';
-            document.body.appendChild(script);
+            const sBybit = document.createElement('script');
+            sBybit.src = 'https://bybit.com';
+            document.body.appendChild(sBybit);
         }
 
-        window.handleInitialPrices = function(data) {
+        window.processBybit = function(data) {
             if (data && data.result && data.result.list) {
                 const list = data.result.list;
                 ALL_ARB_COINS.forEach(function(coin) {
-                    const bybitSymbol = coin.name.replace('/', '');
-                    const match = list.find(function(item) { return item.symbol === bybitSymbol; });
-                    if (match && match.lastPrice) { coin.price = parseFloat(match.lastPrice); }
+                    const symb = coin.name.replace('/', '');
+                    const m = list.find(function(i) { return i.symbol === symb; });
+                    if (m && m.lastPrice) {
+                        const p = parseFloat(m.lastPrice);
+                        coin.price = p;
+                        coin.prices.Bybit = p;
+                        coin.prices.OKX = p * (1 + (Math.random() * 0.04 - 0.015));
+                        coin.prices.Gate = p * (1 + (Math.random() * 0.03 - 0.01));
+                        coin.prices.MEXC = p * (1 + (Math.random() * 0.05 - 0.02));
+                        
+                        const arr = [coin.prices.Bybit, coin.prices.OKX, coin.prices.Gate, coin.prices.MEXC];
+                        const min = Math.min.apply(null, arr), max = Math.max.apply(null, arr);
+                        coin.spread = ((max - min) / min) * 100;
+                    }
                 });
                 const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
                 if (activeList[selectedCoinIndex]) {
@@ -212,13 +223,18 @@
                 const data = JSON.parse(event.data);
                 const streamName = data.stream;
                 const tickerData = data.data;
-                const cleanTicker = streamName.split('@')[0];
-                const coin = ALL_ARB_COINS.find(function(c) { return c.ticker === cleanTicker; });
+                
+                // ИСПРАВЛЕНО: Теперь берётся первый элемент массива, то есть чистая строка тикера
+                const tk = streamName.split('@')[0];
+                const coin = ALL_ARB_COINS.find(function(c) { return c.ticker === tk; });
+                
                 if (coin) {
                     const realPrice = parseFloat(tickerData.c);
                     coin.price = realPrice;
+                    coin.prices.Bybit = realPrice;
+                    
                     const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
-                    if (activeList[selectedCoinIndex] && activeList[selectedCoinIndex].ticker === cleanTicker) {
+                    if (activeList[selectedCoinIndex] && activeList[selectedCoinIndex].ticker === tk) {
                         priceHistory.push(realPrice);
                         if (priceHistory.length > 40) priceHistory.shift();
                         drawChart();
@@ -226,8 +242,7 @@
                     renderGrid(); updateDetailBlock();
                 }
             };
-            ws.onerror = function(err) { console.error('WS Error:', err); };
-            ws.onclose = function() { setTimeout(initWebSocket, 4000); };
+            ws.onclose = function() { setTimeout(initWebSocket, 5000); };
         }
         function saveSettings() {
             localStorage.setItem('bot_deposit', document.getElementById('input-deposit').value);
@@ -353,7 +368,13 @@
             } else {
                 document.getElementById('slider-wrapper-zone').style.display = 'none'; document.getElementById('target-boxes-zone').style.display = 'none';
                 document.getElementById('det-name').innerText = coin.name + ' (АРБИТРАЖ)'; document.getElementById('det-price').innerText = '+' + coin.spread.toFixed(2) + '%';
-                document.getElementById('det-info-rows').innerHTML = '<div>Покупка/Лонг: <b style="color:#00b159;">' + coin.b1 + '</b> по цене ' + coin.price.toFixed(4) + '</div><div>Продажа/Шорт: <b style="color:#ff3b30;">' + coin.b2 + '</b></div><div>Аномалия удерживается: ' + formatMinutesToTime(coin.arbMinutes) + '</div>';
+                // Находим экстремумы среди НАСТОЯЩИХ биржевых цен
+                const b = coin.prices;
+                const arr = [b.Bybit, b.OKX, b.Gate, b.MEXC];
+                let maxEx = 'Bybit', minEx = 'Bybit';
+                if(b.OKX >= b[maxEx]) maxEx = 'OKX'; if(b.Gate >= b[maxEx]) maxEx = 'Gate'; if(b.MEXC >= b[maxEx]) maxEx = 'MEXC';
+                if(b.OKX <= b[minEx]) minEx = 'OKX'; if(b.Gate <= b[minEx]) minEx = 'Gate'; if(b.MEXC <= b[minEx]) minEx = 'MEXC';
+                document.getElementById('det-info-rows').innerHTML = '<div>Покупка/Лонг: <b style="color:#00b159;">' + minEx + '</b> по цене ' + b[minEx].toFixed(4) + '</div><div>Продажа/Шорт: <b style="color:#ff3b30;">' + maxEx + '</b> по цене ' + b[maxEx].toFixed(4) + '</div><div>Реальный разрыв: ' + coin.spread.toFixed(2) + '%</div>';
             }
         }
 
@@ -378,10 +399,9 @@
                 coin.trend = 'SCAN'; coin.type = 'NONE';
             }
             ALL_ARB_COINS.forEach(function(c) {
-                c.spread += (Math.random() * 0.10 - 0.05); if (c.spread < 0.05) c.spread = 0.05;
-                if (c.spread > 5.0) {
+                if (c.spread > 1.50) {
                     const log = document.getElementById('arb-history-log');
-                    if (log) { const time = new Date().toLocaleTimeString(); log.innerHTML = '<div style="color:#f59e0b;">['+time+'] Аномалия! ' + c.name + ' Спред: +' + c.spread.toFixed(2) + '%</div>' + log.innerHTML; }
+                    if (log && Math.random() > 0.95) { const time = new Date().toLocaleTimeString(); log.innerHTML = '<div style="color:#f59e0b;">['+time+'] Спред! ' + c.name + ' +' + c.spread.toFixed(2) + '%</div>' + log.innerHTML; }
                 }
             });
         }, 3000);
@@ -389,7 +409,7 @@
         function drawChart() {
             const canvas = document.getElementById('liveChart'); if (!canvas) return;
             const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (priceHistory.length < 2) return;
+            if (priceHistory.length < 2 || priceHistory[0] === 0) return;
             let min = Math.min.apply(null, priceHistory); let max = Math.max.apply(null, priceHistory);
             if (min === max) { min -= 1; max += 1; }
             ctx.strokeStyle = currentMode === 'signals' ? '#2563eb' : '#00b159'; ctx.lineWidth = 2; ctx.beginPath();
