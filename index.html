@@ -1,4 +1,4 @@
-PE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8">
@@ -83,16 +83,16 @@ PE html>
         <section class="grid-settings">
             <div class="form-group"><label>Депозит, $</label><input type="number" id="input-deposit" oninput="saveSettings()" value="10"></div>
             <div class="form-group"><label>Risk, %</label><input type="number" id="input-risk" oninput="saveSettings()" value="1"></div>
-            <div class="form-group"><label>EMA 1</label><input type="number" id="input-ema1" oninput="saveSettings()" value="9"></div>
-            <div class="form-group"><label>EMA 2</label><input type="number" id="input-ema2" oninput="saveSettings()" value="21"></div>
+            <div class="form-group"><label>EMA быстрая</label><input type="number" id="input-ema1" oninput="saveSettings(); refreshSignalData()" min="2" max="50" value="9"></div>
+            <div class="form-group"><label>EMA медленная</label><input type="number" id="input-ema2" oninput="saveSettings(); refreshSignalData()" min="3" max="200" value="21"></div>
             <div class="stat-card" style="padding:0; background:transparent; border:none;"><div class="stat-title" style="margin-bottom:6px;">Мониторинг</div><div class="badge-active">Работает</div></div>
             <button class="btn-action" id="main-btn" onclick="toggleBot()">⏹ Стоп</button>
         </section>
         <section class="grid-stats">
-            <div class="stat-card"><div class="stat-title">Отсканировано</div><div class="stat-value" id="count-scanned">14</div></div>
-            <div class="stat-card"><div class="stat-title">Сигналов найдено</div><div class="stat-value" id="label-total-signals" style="color:#00b159;">14 Сигналов</div></div>
-            <div class="stat-card"><div class="stat-title">Результаты за день</div><div class="stat-value" style="font-size:18px;"><span style="color:#00b159;" id="count-wins">72 ✅</span> &nbsp;/&nbsp; <span style="color:#ff3b30;" id="count-losses">12 ❌</span></div></div>
-            <div class="stat-card"><div class="stat-title">Точность (Win Rate)</div><div class="stat-value" style="color:#f59e0b;" id="val-winrate">85.7% 📈</div></div>
+            <div class="stat-card"><div class="stat-title">Монет в стратегии</div><div class="stat-value" id="count-scanned">14</div></div>
+            <div class="stat-card"><div class="stat-title">Подтверждённые сигналы</div><div class="stat-value" id="label-total-signals" style="color:#00b159;">Загрузка</div></div>
+            <div class="stat-card"><div class="stat-title">Правило входа</div><div class="stat-value" style="font-size:16px;">EMA + RSI</div></div>
+            <div class="stat-card"><div class="stat-title">Источник / интервал</div><div class="stat-value" style="font-size:16px;">Binance · 15м</div></div>
         </section>
         <section class="coins-grid" id="coins-container"></section>
         <section class="detail-section">
@@ -144,8 +144,10 @@ PE html>
         const audioAlert = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==');
         audioAlert.volume = 0.5;
 
-        let wins = parseInt(localStorage.getItem('trader_wins')) || 72;
-        let losses = parseInt(localStorage.getItem('trader_losses')) || 12;
+        const SIGNAL_TIMEFRAME = '15m';
+        const SIGNAL_REFRESH_MS = 60000;
+        const RSI_PERIOD = 14;
+        const ATR_PERIOD = 14;
 
         const COINS = [
             { name: 'LTC/USDT', type: 'NONE', price: 95.40, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.28, arbMinutes: 145, ticker: 'ltcusdt', rsi: 50, trend: 'SCAN' },
@@ -305,6 +307,7 @@ PE html>
             }
             renderGrid(); updateDetailBlock();
             initMarketData();
+            refreshSignalData();
         }
 
         window.processBybit = function(data) {
@@ -364,6 +367,7 @@ PE html>
                         const realPrice = parseFloat(tickerData.c);
                         if (!Number.isNaN(realPrice)) {
                             coin.price = realPrice;
+                            coin.signalPriceAt = Date.now();
                             const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
                             if (activeList[selectedCoinIndex] && activeList[selectedCoinIndex].ticker === tk) {
                                 priceHistory.push(realPrice);
@@ -383,6 +387,203 @@ PE html>
                 }
             };
             ws.onclose = function() { setTimeout(initSignalWebSocket, 5000); };
+        }
+
+        let signalRefreshInProgress = false;
+        async function refreshSignalData() {
+            if (signalRefreshInProgress || !isRunning) return;
+            signalRefreshInProgress = true;
+            try {
+                const fastPeriod = Math.max(2, Math.min(50, parseInt(document.getElementById('input-ema1').value, 10) || 9));
+                const slowPeriod = Math.max(fastPeriod + 1, Math.min(200, parseInt(document.getElementById('input-ema2').value, 10) || 21));
+                await Promise.all(COINS.map(async function(coin) {
+                    try {
+                        const url = 'https://api.binance.com/api/v3/klines?symbol=' +
+                            encodeURIComponent(coin.ticker.toUpperCase()) + '&interval=' +
+                            SIGNAL_TIMEFRAME + '&limit=100';
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error('HTTP ' + response.status);
+                        const rawCandles = await response.json();
+                        if (!Array.isArray(rawCandles)) throw new Error('Unexpected candle response');
+                        const latestCandle = rawCandles[rawCandles.length - 1];
+                        if (!Array.isArray(latestCandle) || !Number.isFinite(Number(latestCandle[4]))) {
+                            throw new Error('Latest candle has no valid close price');
+                        }
+                        coin.price = Number(latestCandle[4]);
+                        coin.signalPriceAt = Date.now();
+                        const candles = rawCandles.filter(function(candle) {
+                            return Array.isArray(candle) && Number(candle[6]) < Date.now();
+                        }).map(function(candle) {
+                            return {
+                                openTime: Number(candle[0]),
+                                high: Number(candle[2]),
+                                low: Number(candle[3]),
+                                close: Number(candle[4]),
+                                volume: Number(candle[5]),
+                                closeTime: Number(candle[6])
+                            };
+                        });
+                        analyzeSignalCandles(coin, candles, fastPeriod, slowPeriod);
+                    } catch (err) {
+                        coin.trend = 'SCAN';
+                        coin.type = 'NONE';
+                        coin.signal = null;
+                        coin.signalStatus = 'Свечи недоступны: ' + err.message;
+                        coin.signalKey = '';
+                        console.warn(coin.name + ' signal candle request failed:', err);
+                    }
+                }));
+                if (currentMode === 'signals') {
+                    updateSignalStats();
+                    renderGrid();
+                    updateDetailBlock();
+                }
+            } finally {
+                signalRefreshInProgress = false;
+            }
+        }
+
+        function calculateEMA(values, period) {
+            const result = new Array(values.length).fill(null);
+            if (values.length < period) return result;
+            let initialAverage = 0;
+            for (let i = 0; i < period; i++) initialAverage += values[i];
+            result[period - 1] = initialAverage / period;
+            const multiplier = 2 / (period + 1);
+            for (let i = period; i < values.length; i++) {
+                result[i] = (values[i] - result[i - 1]) * multiplier + result[i - 1];
+            }
+            return result;
+        }
+
+        function calculateRSI(values, period) {
+            const result = new Array(values.length).fill(null);
+            if (values.length <= period) return result;
+            let averageGain = 0;
+            let averageLoss = 0;
+            for (let i = 1; i <= period; i++) {
+                const change = values[i] - values[i - 1];
+                if (change > 0) averageGain += change;
+                else averageLoss -= change;
+            }
+            averageGain /= period;
+            averageLoss /= period;
+            const toRsi = function(gain, loss) {
+                return loss === 0 ? (gain === 0 ? 50 : 100) : 100 - 100 / (1 + gain / loss);
+            };
+            result[period] = toRsi(averageGain, averageLoss);
+            for (let i = period + 1; i < values.length; i++) {
+                const change = values[i] - values[i - 1];
+                averageGain = (averageGain * (period - 1) + Math.max(change, 0)) / period;
+                averageLoss = (averageLoss * (period - 1) + Math.max(-change, 0)) / period;
+                result[i] = toRsi(averageGain, averageLoss);
+            }
+            return result;
+        }
+
+        function calculateATR(candles, index, period) {
+            if (index < period) return null;
+            const trueRange = function(i) {
+                const previousClose = candles[i - 1].close;
+                return Math.max(
+                    candles[i].high - candles[i].low,
+                    Math.abs(candles[i].high - previousClose),
+                    Math.abs(candles[i].low - previousClose)
+                );
+            };
+            let total = 0;
+            for (let i = 1; i <= period; i++) {
+                total += trueRange(i);
+            }
+            let atr = total / period;
+            for (let i = period + 1; i <= index; i++) {
+                atr = (atr * (period - 1) + trueRange(i)) / period;
+            }
+            return atr;
+        }
+
+        function clearSignal(coin, status) {
+            coin.trend = 'SCAN';
+            coin.type = 'NONE';
+            coin.signal = null;
+            coin.signalStatus = status;
+            coin.signalKey = '';
+        }
+
+        function analyzeSignalCandles(coin, candles, fastPeriod, slowPeriod) {
+            if (candles.length < Math.max(slowPeriod + RSI_PERIOD, 35)) {
+                clearSignal(coin, 'Недостаточно закрытых свечей для расчёта');
+                return;
+            }
+            const closes = candles.map(function(candle) { return candle.close; });
+            const fastEMA = calculateEMA(closes, fastPeriod);
+            const slowEMA = calculateEMA(closes, slowPeriod);
+            const rsi = calculateRSI(closes, RSI_PERIOD);
+            const last = candles.length - 1;
+            const currentPrice = Number(coin.price);
+            let crossIndex = -1;
+            for (let i = Math.max(1, last - 1); i <= last; i++) {
+                if (fastEMA[i - 1] <= slowEMA[i - 1] && fastEMA[i] > slowEMA[i]) crossIndex = i;
+                if (fastEMA[i - 1] >= slowEMA[i - 1] && fastEMA[i] < slowEMA[i]) crossIndex = i;
+            }
+            if (crossIndex < 0) {
+                clearSignal(coin, 'Жду пересечения EMA на закрытой свече');
+                coin.indicators = { fastEMA: fastEMA[last], slowEMA: slowEMA[last], rsi: rsi[last] };
+                return;
+            }
+
+            const isLong = fastEMA[crossIndex] > slowEMA[crossIndex];
+            const confirmed = isLong
+                ? fastEMA[last] > slowEMA[last] && rsi[last] >= 50 && rsi[last] <= 70 &&
+                    candles[crossIndex].close > fastEMA[crossIndex]
+                : fastEMA[last] < slowEMA[last] && rsi[last] >= 30 && rsi[last] <= 50 &&
+                    candles[crossIndex].close < fastEMA[crossIndex];
+            const entry = candles[crossIndex].close;
+            const signalAge = candles[last].closeTime - candles[crossIndex].closeTime;
+            if (!confirmed || signalAge > 2 * 15 * 60 * 1000 ||
+                !coin.signalPriceAt || Date.now() - coin.signalPriceAt > 15000 || !Number.isFinite(currentPrice) ||
+                Math.abs((currentPrice - entry) / entry) > 0.005) {
+                clearSignal(coin, !coin.signalPriceAt || Date.now() - coin.signalPriceAt > 15000
+                    ? 'Жду актуальную цену Binance'
+                    : 'Пересечение есть, но подтверждение или цена входа уже неактуальны');
+                coin.indicators = { fastEMA: fastEMA[last], slowEMA: slowEMA[last], rsi: rsi[last] };
+                return;
+            }
+
+            const atr = calculateATR(candles, crossIndex, ATR_PERIOD);
+            if (!Number.isFinite(atr) || atr <= 0) {
+                clearSignal(coin, 'Жду данные для расчёта волатильности и риска');
+                return;
+            }
+            const riskDistance = Math.max(atr * 1.5, entry * 0.005);
+            const direction = isLong ? 1 : -1;
+            const key = coin.ticker + ':' + candles[crossIndex].closeTime + ':' + (isLong ? 'LONG' : 'SHORT');
+            coin.trend = 'SIGNAL';
+            coin.type = isLong ? 'LONG' : 'SHORT';
+            coin.signalKey = key;
+            coin.signalStatus = 'Подтверждён закрытой свечой';
+            coin.signal = {
+                entry: entry,
+                stopLoss: entry - direction * riskDistance,
+                takeProfit1: entry + direction * riskDistance * 1.5,
+                takeProfit2: entry + direction * riskDistance * 2.5,
+                candleTime: candles[crossIndex].closeTime,
+                fastEMA: fastEMA[crossIndex],
+                slowEMA: slowEMA[crossIndex],
+                rsi: rsi[crossIndex],
+                atr: atr
+            };
+            coin.indicators = { fastEMA: fastEMA[last], slowEMA: slowEMA[last], rsi: rsi[last] };
+            if (coin.lastNotifiedSignalKey !== key) {
+                coin.lastNotifiedSignalKey = key;
+                showToast('Сигнал по закрытой свече: ' + coin.name + ' → ' + coin.type, isLong);
+            }
+        }
+
+        function updateSignalStats() {
+            const activeSignals = COINS.filter(function(coin) { return coin.trend === 'SIGNAL'; }).length;
+            document.getElementById('label-total-signals').innerText = activeSignals + ' подтверждённых сигналов';
+            document.getElementById('count-scanned').innerText = COINS.length;
         }
 
         function initRestTickerFeed(exchange, market) {
@@ -776,9 +977,8 @@ PE html>
             document.getElementById('btn-arb-mode').classList.remove('active');
             if (mode === 'signals') {
                 document.getElementById('btn-sig-mode').classList.add('active');
-                document.getElementById('label-total-signals').innerText = COINS.length + " Сигналов";
+                updateSignalStats();
                 document.getElementById('det-price-lbl').innerText = "Текущая цена";
-                document.getElementById('count-scanned').innerText = COINS.length;
                 document.getElementById('slider-wrapper-zone').style.display = 'block';
                 document.getElementById('target-boxes-zone').style.display = 'grid';
                 document.getElementById('legends-zone').innerHTML = '<div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div>Цена рынка</div>';
@@ -816,27 +1016,12 @@ PE html>
             }
         }
 
-        function showToast(message, isWin) {
+        function showToast(message, isPositive) {
             const container = document.getElementById('toast-container');
             if (!container) return;
             const toast = document.createElement('div'); toast.className = 'toast';
-            toast.style.backgroundColor = isWin ? '#00b159' : '#ff3b30'; toast.innerText = message;
+            toast.style.backgroundColor = isPositive ? '#00b159' : '#ff3b30'; toast.innerText = message;
             container.appendChild(toast); setTimeout(function() { toast.remove(); }, 3000);
-        }
-
-        function updateStatsUI() {
-            document.getElementById('count-wins').innerText = wins + ' ✅';
-            document.getElementById('count-losses').innerText = losses + ' ❌';
-            let total = wins + losses;
-            let rate = total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
-            document.getElementById('val-winrate').innerText = rate + '% 📈';
-        }
-
-        function formatMinutesToTime(totalMin) {
-            if (totalMin <= 0) return "0м";
-            const hours = Math.floor(totalMin / 60);
-            const mins = totalMin % 60;
-            return hours > 0 ? hours + 'ч ' + mins + 'м' : mins + 'м';
         }
 
         function renderGrid() {
@@ -851,15 +1036,12 @@ PE html>
                 if (currentMode === 'signals') {
                     if (coin.trend === 'SCAN') {
                         card.className = 'coin-card scanning-mode';
-                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="badge-accuracy">SCAN 40s</span></div><div class="coin-price" style="color:#848e9c;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; opacity:0.6; font-family:monospace;">🔍 Анализ индикаторов...</div>';
+                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="badge-accuracy">ОЖИДАНИЕ</span></div><div class="coin-price" style="color:#848e9c;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; opacity:0.75;">' + (coin.signalStatus || 'Загружаю свечи Binance...') + '</div>';
                     } else {
                         card.className = 'coin-card new-signal' + (coin.type === 'SHORT' ? ' short-style' : '');
                         if(idx === selectedCoinIndex) card.style.borderColor = '#00ff73';
-                        let exitTime = new Date(Date.now() + coin.totalMinutes * 60000);
-                        let hh = exitTime.getHours(), mm = exitTime.getMinutes();
-                        if (hh < 10) hh = '0' + hh; if (mm < 10) mm = '0' + mm;
-                        let timerText = '⏱ Тренд: ' + formatMinutesToTime(coin.totalMinutes) + ' (Выход в ' + hh + ':' + mm + ')';
-                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-accuracy">' + coin.leverage + 'x</span><span class="badge-accuracy">🎯 ' + coin.accuracy.toFixed(0) + '%</span><span class="' + (coin.type==='LONG'?'badge-long':'badge-short') + '">' + coin.type + '</span></div></div><div class="coin-price" style="color:#fff;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.9; white-space:nowrap;">' + timerText + '</div>';
+                        const signalTime = new Date(coin.signal.candleTime).toLocaleTimeString();
+                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="' + (coin.type === 'LONG' ? 'badge-long' : 'badge-short') + '">' + coin.type + '</span></div><div class="coin-price" style="color:#fff;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.9;">EMA ' + coin.signal.fastEMA.toFixed(4) + ' / ' + coin.signal.slowEMA.toFixed(4) + ' · RSI ' + coin.signal.rsi.toFixed(1) + ' · 15м ' + signalTime + '</div>';
                     }
                 } else {
                     const pair = getArbPair(coin);
@@ -894,23 +1076,21 @@ PE html>
                 document.getElementById('trade-scheme').style.display = 'none';
                 document.getElementById('det-name').innerText = coin.name + (coin.trend !== 'SCAN' ? ' · ' + coin.type : ' · СКАНИРОВАНИЕ');
                 document.getElementById('det-price').innerText = coin.price.toFixed(4);
-                let isLong = coin.type === 'LONG';
-                let sl = isLong ? coin.price * 0.98 : coin.price * 1.02;
-                let tp1 = isLong ? coin.price * 1.02 : coin.price * 0.98;
-                let tp2 = isLong ? coin.price * 1.05 : coin.price * 0.95;
                 if (coin.trend === 'SCAN') {
-                    document.getElementById('det-info-rows').innerHTML = '<div>Статус: Ожидание подтверждения паттерна по EMA...</div><div>Выделенный риск-маржинальный объем: $' + marginUsdt + '</div>';
+                    document.getElementById('det-info-rows').innerHTML = '<div>Статус: ' + (coin.signalStatus || 'Загружаю реальные 15-минутные свечи Binance...') + '</div><div>Правило: пересечение EMA ' + document.getElementById('input-ema1').value + '/' + document.getElementById('input-ema2').value + ' и подтверждение RSI(14).</div>';
                     document.getElementById('lbl-sl').innerText = '-'; document.getElementById('lbl-entry').innerText = '-';
                     document.getElementById('lbl-tp1').innerText = '-'; document.getElementById('lbl-tp2').innerText = '-';
                     document.getElementById('box-entry').innerText = coin.price.toFixed(4);
                     document.getElementById('box-sl').innerText = '-'; document.getElementById('box-tp1').innerText = '-'; document.getElementById('box-tp2').innerText = '-';
                 } else {
-                    if (isLong) detailCard.classList.add('green-alert'); else detailCard.classList.add('red-alert');
-                    document.getElementById('det-info-rows').innerHTML = '<div>Плечо: ' + coin.leverage + 'x | Вероятность: ' + coin.accuracy.toFixed(0) + '%</div><div>Рекомендуемая маржа: $' + marginUsdt + '</div>';
-                    document.getElementById('lbl-sl').innerText = sl.toFixed(4); document.getElementById('lbl-entry').innerText = coin.price.toFixed(4);
-                    document.getElementById('lbl-tp1').innerText = tp1.toFixed(4); document.getElementById('lbl-tp2').innerText = tp2.toFixed(4);
-                    document.getElementById('box-entry').innerText = coin.price.toFixed(4);
-                    document.getElementById('box-sl').innerText = sl.toFixed(4); document.getElementById('box-tp1').innerText = tp1.toFixed(4); document.getElementById('box-tp2').innerText = tp2.toFixed(4);
+                    if (coin.type === 'LONG') detailCard.classList.add('green-alert'); else detailCard.classList.add('red-alert');
+                    const signal = coin.signal;
+                    const signalTime = new Date(signal.candleTime).toLocaleString();
+                    document.getElementById('det-info-rows').innerHTML = '<div>Подтверждён по закрытой свече Binance 15м в ' + signalTime + '.</div><div>EMA ' + document.getElementById('input-ema1').value + ': ' + signal.fastEMA.toFixed(6) + ' | EMA ' + document.getElementById('input-ema2').value + ': ' + signal.slowEMA.toFixed(6) + ' | RSI(14): ' + signal.rsi.toFixed(1) + '.</div><div>Вход по цене закрытия свечи: <b>' + signal.entry.toFixed(6) + '</b>. Уровни рассчитаны по ATR(14), маржа по настройке: $' + marginUsdt + '.</div><div>Сигнал не гарантирует прибыль; проверь цену исполнения и риск перед сделкой.</div>';
+                    document.getElementById('lbl-sl').innerText = signal.stopLoss.toFixed(6); document.getElementById('lbl-entry').innerText = signal.entry.toFixed(6);
+                    document.getElementById('lbl-tp1').innerText = signal.takeProfit1.toFixed(6); document.getElementById('lbl-tp2').innerText = signal.takeProfit2.toFixed(6);
+                    document.getElementById('box-entry').innerText = signal.entry.toFixed(6);
+                    document.getElementById('box-sl').innerText = signal.stopLoss.toFixed(6); document.getElementById('box-tp1').innerText = signal.takeProfit1.toFixed(6); document.getElementById('box-tp2').innerText = signal.takeProfit2.toFixed(6);
                 }
             } else {
                 document.getElementById('slider-wrapper-zone').style.display = 'none'; document.getElementById('target-boxes-zone').style.display = 'none';
@@ -950,18 +1130,6 @@ PE html>
                 renderGrid();
                 updateArbCount();
             }
-            let randomIdx = Math.floor(Math.random() * COINS.length); let coin = COINS[randomIdx];
-            if (coin.trend === 'SCAN' && Math.random() > 0.8) {
-                coin.trend = 'SIGNAL'; coin.type = Math.random() > 0.5 ? 'LONG' : 'SHORT';
-                coin.totalMinutes = Math.floor(Math.random() * 90) + 15; coin.accuracy = Math.floor(Math.random() * 25) + 70;
-                showToast('Новый сигнал: ' + coin.name + ' -> ' + coin.type, true);
-                if(randomIdx === selectedCoinIndex) { priceHistory = Array.from(new Array(40), function() { return coin.price; }); }
-            } else if (coin.trend === 'SIGNAL' && Math.random() > 0.9) {
-                let isWin = Math.random() > 0.2; if (isWin) wins++; else losses++;
-                updateStatsUI(); localStorage.setItem('trader_wins', wins); localStorage.setItem('trader_losses', losses);
-                showToast(coin.name + (isWin ? ' закрылся по Take-Profit! ✅' : ' закрылся по Stop-Loss ❌'), isWin);
-                coin.trend = 'SCAN'; coin.type = 'NONE';
-            }
             ALL_ARB_COINS.forEach(function(c) {
                 if (c.arbStable) {
                     const log = document.getElementById('arb-history-log');
@@ -973,6 +1141,7 @@ PE html>
                 }
             });
         }, 3000);
+        setInterval(refreshSignalData, SIGNAL_REFRESH_MS);
 
         function drawChart() {
             const canvas = document.getElementById('liveChart'); if (!canvas) return;
