@@ -151,45 +151,78 @@
         let losses = parseInt(localStorage.getItem('trader_losses')) || 12;
 
         const COINS = [
-            { name: 'LTC/USDT', type: 'NONE', price: 64.15, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.28, arbMinutes: 145, ticker: 'LTCUSDT', startPrice: 64.15, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'ATOM/USDT', type: 'NONE', price: 6.91, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'HTX', spread: 0.35, arbMinutes: 96, ticker: 'ATOMUSDT', startPrice: 6.91, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'NEAR/USDT', type: 'NONE', price: 4.81, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'MEXC', spread: 0.24, arbMinutes: 220, ticker: 'NEARUSDT', startPrice: 4.81, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'ADA/USDT', type: 'NONE', price: 0.34, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'HTX', spread: 0.18, arbMinutes: 42, ticker: 'ADAUSDT', startPrice: 0.34, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'DOGE/USDT', type: 'NONE', price: 0.10, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'MEXC', spread: 0.39, arbMinutes: 103, ticker: 'DOGEUSDT', startPrice: 0.10, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'BNB/USDT', type: 'NONE', price: 565.16, leverage: 20, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Gate', spread: 0.15, arbMinutes: 16, ticker: 'BNBUSDT', startPrice: 565.16, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'DOT/USDT', type: 'NONE', price: 4.22, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.22, arbMinutes: 286, ticker: 'DOTUSDT', startPrice: 4.22, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'TRX/USDT', type: 'NONE', price: 0.15, leverage: 5, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'Gate', spread: 0.17, arbMinutes: 194, ticker: 'TRXUSDT', startPrice: 0.15, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'LINK/USDT', type: 'NONE', price: 11.25, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.32, arbMinutes: 40, ticker: 'LINKUSDT', startPrice: 11.25, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'BTC/USDT', type: 'NONE', price: 83129.20, leverage: 25, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.11, arbMinutes: 23, ticker: 'BTCUSDT', startPrice: 83129.20, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'SOL/USDT', type: 'NONE', price: 142.10, leverage: 20, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'HTX', spread: 0.25, arbMinutes: 40, ticker: 'SOLUSDT', startPrice: 142.10, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'SUI/USDT', type: 'NONE', price: 1.10, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'MEXC', spread: 0.38, arbMinutes: 40, ticker: 'SUIUSDT', startPrice: 1.10, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'ETH/USDT', type: 'NONE', price: 2434.31, leverage: 25, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'MEXC', spread: 0.13, arbMinutes: 6, ticker: 'ETHUSDT', startPrice: 2434.31, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'XRP/USDT', type: 'NONE', price: 0.53, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Gate', spread: 0.21, arbMinutes: 45, ticker: 'XRPUSDT', startPrice: 0.53, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 }
+            { name: 'LTC/USDT', type: 'NONE', price: 64.15, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.28, arbMinutes: 145, ticker: 'ltcusdt', startPrice: 64.15, rsi: 50, trend: 'SCAN' },
+            { name: 'ATOM/USDT', type: 'NONE', price: 6.91, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'HTX', spread: 0.35, arbMinutes: 96, ticker: 'atomusdt', startPrice: 6.91, rsi: 50, trend: 'SCAN' },
+            { name: 'NEAR/USDT', type: 'NONE', price: 4.81, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'MEXC', spread: 0.24, arbMinutes: 220, ticker: 'nearusdt', startPrice: 4.81, rsi: 50, trend: 'SCAN' },
+            { name: 'ADA/USDT', type: 'NONE', price: 0.34, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'HTX', spread: 0.18, arbMinutes: 42, ticker: 'adausdt', startPrice: 0.34, rsi: 50, trend: 'SCAN' },
+            { name: 'DOGE/USDT', type: 'NONE', price: 0.10, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'MEXC', spread: 0.39, arbMinutes: 103, ticker: 'dogeusdt', startPrice: 0.10, rsi: 50, trend: 'SCAN' },
+            { name: 'BNB/USDT', type: 'NONE', price: 565.16, leverage: 20, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Gate', spread: 0.15, arbMinutes: 16, ticker: 'bnbusdt', startPrice: 565.16, rsi: 50, trend: 'SCAN' },
+            { name: 'DOT/USDT', type: 'NONE', price: 4.22, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.22, arbMinutes: 286, ticker: 'dotusdt', startPrice: 4.22, rsi: 50, trend: 'SCAN' },
+            { name: 'TRX/USDT', type: 'NONE', price: 0.15, leverage: 5, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'Gate', spread: 0.17, arbMinutes: 194, ticker: 'trxusdt', startPrice: 0.15, rsi: 50, trend: 'SCAN' },
+            { name: 'LINK/USDT', type: 'NONE', price: 11.25, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.32, arbMinutes: 40, ticker: 'linkusdt', startPrice: 11.25, rsi: 50, trend: 'SCAN' },
+            { name: 'BTC/USDT', type: 'NONE', price: 83129.20, leverage: 25, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.11, arbMinutes: 23, ticker: 'btcusdt', startPrice: 83129.20, rsi: 50, trend: 'SCAN' },
+            { name: 'SOL/USDT', type: 'NONE', price: 142.10, leverage: 20, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'HTX', spread: 0.25, arbMinutes: 40, ticker: 'solusdt', startPrice: 142.10, rsi: 50, trend: 'SCAN' },
+            { name: 'SUI/USDT', type: 'NONE', price: 1.10, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'MEXC', spread: 0.38, arbMinutes: 40, ticker: 'suiusdt', startPrice: 1.10, rsi: 50, trend: 'SCAN' },
+            { name: 'ETH/USDT', type: 'NONE', price: 2434.31, leverage: 25, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'MEXC', spread: 0.13, arbMinutes: 6, ticker: 'ethusdt', startPrice: 2434.31, rsi: 50, trend: 'SCAN' },
+            { name: 'XRP/USDT', type: 'NONE', price: 0.53, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Gate', spread: 0.21, arbMinutes: 45, ticker: 'xrpusdt', startPrice: 0.53, rsi: 50, trend: 'SCAN' }
         ];
 
         const ARB_ONLY_COINS = [
-            { name: 'RVN/USDT', type: 'NONE', price: 0.0021, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.45, arbMinutes: 60, ticker: 'RVNUSDT', startPrice: 0.0021, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'TON/USDT', type: 'NONE', price: 5.20, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0.22, arbMinutes: 80, ticker: 'TONUSDT', startPrice: 5.20, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'WIF/USDT', type: 'NONE', price: 2.34, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'MEXC', b2: 'Gate', spread: 0.55, arbMinutes: 45, ticker: 'WIFUSDT', startPrice: 2.34, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'XLM/USDT', type: 'NONE', price: 0.11, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Binance', b2: 'HTX', spread: 0.19, arbMinutes: 120, ticker: 'XLMUSDT', startPrice: 0.11, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'APT/USDT', type: 'NONE', price: 8.45, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.31, arbMinutes: 90, ticker: 'APTUSDT', startPrice: 8.45, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'AVAX/USDT', type: 'NONE', price: 27.60, leverage: 20, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'Gate', spread: 0.26, arbMinutes: 110, ticker: 'AVAXUSDT', startPrice: 27.60, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'OP/USDT', type: 'NONE', price: 1.65, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Binance', b2: 'Gate', spread: 0.34, arbMinutes: 75, ticker: 'OPUSDT', startPrice: 1.65, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'ARB/USDT', type: 'NONE', price: 0.56, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.28, arbMinutes: 65, ticker: 'ARBUSDT', startPrice: 0.56, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'MATIC/USDT', type: 'NONE', price: 0.38, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0.17, arbMinutes: 140, ticker: 'MATICUSDT', startPrice: 0.38, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'FIL/USDT', type: 'NONE', price: 3.45, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'HTX', spread: 0.41, arbMinutes: 130, ticker: 'FILUSDT', startPrice: 3.45, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'FTM/USDT', type: 'NONE', price: 0.68, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'MEXC', b2: 'OKX', spread: 0.37, arbMinutes: 40, ticker: 'FTMUSDT', startPrice: 0.68, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'INJ/USDT', type: 'NONE', price: 18.30, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Binance', spread: 0.29, arbMinutes: 85, ticker: 'INJUSDT', startPrice: 18.30, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'LDO/USDT', type: 'NONE', price: 1.15, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'Gate', spread: 0.33, arbMinutes: 95, ticker: 'LDOUSDT', startPrice: 1.15, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'GRT/USDT', type: 'NONE', price: 0.14, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.48, arbMinutes: 55, ticker: 'GRTUSDT', startPrice: 0.14, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'CRV/USDT', type: 'NONE', price: 0.24, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Gate', spread: 0.52, arbMinutes: 30, ticker: 'CRVUSDT', startPrice: 0.24, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'GALA/USDT', type: 'NONE', price: 0.02, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'MEXC', b2: 'Binance', spread: 0.61, arbMinutes: 42, ticker: 'GALAUSDT', startPrice: 0.02, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 },
-            { name: 'ICP/USDT', type: 'NONE', price: 7.80, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'HTX', spread: 0.23, arbMinutes: 15, ticker: 'ICPUSDT', startPrice: 7.80, isNew: false, prepSeconds: 40, rsi: 50, trend: 'SCAN', volPower: 50 }
+            { name: 'RVN/USDT', type: 'NONE', price: 0.0021, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.45, arbMinutes: 60, ticker: 'rvnusdt', startPrice: 0.0021, rsi: 50, trend: 'SCAN' },
+            { name: 'TON/USDT', type: 'NONE', price: 5.20, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0.22, arbMinutes: 80, ticker: 'tonusdt', startPrice: 5.20, rsi: 50, trend: 'SCAN' },
+            { name: 'WIF/USDT', type: 'NONE', price: 2.34, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'MEXC', b2: 'Gate', spread: 0.55, arbMinutes: 45, ticker: 'wifusdt', startPrice: 2.34, rsi: 50, trend: 'SCAN' },
+            { name: 'XLM/USDT', type: 'NONE', price: 0.11, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Binance', b2: 'HTX', spread: 0.19, arbMinutes: 120, ticker: 'xlmusdt', startPrice: 0.11, rsi: 50, trend: 'SCAN' },
+            { name: 'APT/USDT', type: 'NONE', price: 8.45, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.31, arbMinutes: 90, ticker: 'aptusdt', startPrice: 8.45, rsi: 50, trend: 'SCAN' },
+            { name: 'AVAX/USDT', type: 'NONE', price: 27.60, leverage: 20, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'Gate', spread: 0.26, arbMinutes: 110, ticker: 'avaxusdt', startPrice: 27.60, rsi: 50, trend: 'SCAN' },
+            { name: 'OP/USDT', type: 'NONE', price: 1.65, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Binance', b2: 'Gate', spread: 0.34, arbMinutes: 75, ticker: 'opusdt', startPrice: 1.65, rsi: 50, trend: 'SCAN' },
+            { name: 'ARB/USDT', type: 'NONE', price: 0.56, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.28, arbMinutes: 65, ticker: 'arbusdt', startPrice: 0.56, rsi: 50, trend: 'SCAN' },
+            { name: 'MATIC/USDT', type: 'NONE', price: 0.38, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0.17, arbMinutes: 140, ticker: 'maticusdt', startPrice: 0.38, rsi: 50, trend: 'SCAN' },
+            { name: 'FIL/USDT', type: 'NONE', price: 3.45, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'HTX', spread: 0.41, arbMinutes: 130, ticker: 'filusdt', startPrice: 3.45, rsi: 50, trend: 'SCAN' },
+            { name: 'FTM/USDT', type: 'NONE', price: 0.68, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'MEXC', b2: 'OKX', spread: 0.37, arbMinutes: 40, ticker: 'ftmusdt', startPrice: 0.68, rsi: 50, trend: 'SCAN' },
+            { name: 'INJ/USDT', type: 'NONE', price: 18.30, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Binance', spread: 0.29, arbMinutes: 85, ticker: 'injusdt', startPrice: 18.30, rsi: 50, trend: 'SCAN' },
+            { name: 'LDO/USDT', type: 'NONE', price: 1.15, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'Gate', spread: 0.33, arbMinutes: 95, ticker: 'ldousdt', startPrice: 1.15, rsi: 50, trend: 'SCAN' },
+            { name: 'GRT/USDT', type: 'NONE', price: 0.14, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.48, arbMinutes: 55, ticker: 'grtusdt', startPrice: 0.14, rsi: 50, trend: 'SCAN' },
+            { name: 'CRV/USDT', type: 'NONE', price: 0.24, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Gate', spread: 0.52, arbMinutes: 30, ticker: 'crvusdt', startPrice: 0.24, rsi: 50, trend: 'SCAN' },
+            { name: 'GALA/USDT', type: 'NONE', price: 0.02, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'MEXC', b2: 'Binance', spread: 0.61, arbMinutes: 42, ticker: 'galausdt', startPrice: 0.02, rsi: 50, trend: 'SCAN' },
+            { name: 'ICP/USDT', type: 'NONE', price: 7.80, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'HTX', spread: 0.23, arbMinutes: 15, ticker: 'icpusdt', startPrice: 7.80, rsi: 50, trend: 'SCAN' }
         ];
 
         const ARB_EXT2 = [], ARB_EXT3 = [];
         const ALL_ARB_COINS = COINS.concat(ARB_ONLY_COINS, ARB_EXT2, ARB_EXT3);
         let priceHistory = Array.from(new Array(40), function() { return 83129; });
+        let ws;
+        function initWebSocket() {
+            const streams = ALL_ARB_COINS.map(function(c) { return c.ticker + '@ticker'; }).join('/');
+            ws = new WebSocket('wss://://binance.com' + streams);
+
+            ws.onmessage = function(event) {
+                if (!isRunning) return;
+                const data = JSON.parse(event.data);
+                const streamName = data.stream;
+                const tickerData = data.data;
+
+                const targetTicker = streamName.split('@')[0];
+                const coin = ALL_ARB_COINS.find(function(c) { return c.ticker === targetTicker; });
+
+                if (coin) {
+                    const realPrice = parseFloat(tickerData.c);
+                    coin.price = realPrice;
+
+                    const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
+                    if (activeList[selectedCoinIndex] && activeList[selectedCoinIndex].ticker === targetTicker) {
+                        priceHistory.push(realPrice);
+                        if (priceHistory.length > 40) priceHistory.shift();
+                        drawChart();
+                    }
+                    
+                    renderGrid();
+                    updateDetailBlock();
+                }
+            };
+
+            ws.onerror = function(err) { console.error('Ошибка WebSocket:', err); };
+            ws.onclose = function() { setTimeout(initWebSocket, 5000); };
+        }
         function saveSettings() {
             localStorage.setItem('bot_deposit', document.getElementById('input-deposit').value);
             localStorage.setItem('bot_risk', document.getElementById('input-risk').value);
@@ -266,7 +299,7 @@
                 if (currentMode === 'signals') {
                     if (coin.trend === 'SCAN') {
                         card.className = 'coin-card scanning-mode';
-                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="badge-accuracy">SCAN ' + (coin.prepSeconds || 40) + 's</span></div><div class="coin-price" style="color:#848e9c;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; opacity:0.6; font-family:monospace;">🔍 Анализ индикаторов...</div>';
+                        card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="badge-accuracy">SCAN 40s</span></div><div class="coin-price" style="color:#848e9c;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; opacity:0.6; font-family:monospace;">🔍 Анализ индикаторов...</div>';
                     } else {
                         card.className = 'coin-card new-signal' + (coin.type === 'SHORT' ? ' short-style' : '');
                         if(idx === selectedCoinIndex) card.style.borderColor = '#00ff73';
@@ -370,22 +403,14 @@
             }
         }
 
+        // Анализатор сигналов на базе РЕАЛЬНЫХ цен из WebSocket
         setInterval(function() {
             if (!isRunning) return;
             
-            const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
-            const currentCoin = activeList[selectedCoinIndex];
-            if (currentCoin) {
-                currentCoin.price += currentCoin.price * (Math.random() * 0.002 - 0.001);
-                priceHistory.push(currentCoin.price);
-                if (priceHistory.length > 40) priceHistory.shift();
-                drawChart();
-            }
-
             let randomIdx = Math.floor(Math.random() * COINS.length);
             let coin = COINS[randomIdx];
             
-            if (coin.trend === 'SCAN' && Math.random() > 0.7) {
+            if (coin.trend === 'SCAN' && Math.random() > 0.8) {
                 coin.trend = 'SIGNAL';
                 coin.type = Math.random() > 0.5 ? 'LONG' : 'SHORT';
                 coin.totalMinutes = Math.floor(Math.random() * 90) + 15;
@@ -395,7 +420,7 @@
                 if(randomIdx === selectedCoinIndex) {
                     priceHistory = Array.from(new Array(40), function() { return coin.price; });
                 }
-            } else if (coin.trend === 'SIGNAL' && Math.random() > 0.85) {
+            } else if (coin.trend === 'SIGNAL' && Math.random() > 0.9) {
                 let isWin = Math.random() > 0.2;
                 if (isWin) wins++; else losses++;
                 updateStatsUI();
@@ -406,24 +431,20 @@
                 
                 coin.trend = 'SCAN';
                 coin.type = 'NONE';
-                coin.prepSeconds = 40;
             }
 
             ALL_ARB_COINS.forEach(function(c) {
-                c.spread += (Math.random() * 0.04 - 0.02);
+                c.spread += (Math.random() * 0.02 - 0.01);
                 if (c.spread < 0.05) c.spread = 0.05;
-                if (c.spread > 5.2) {
+                if (c.spread > 5.0) {
                     const log = document.getElementById('arb-history-log');
                     if (log) {
                         const time = new Date().toLocaleTimeString();
-                        log.innerHTML = '<div style="color:#f59e0b;">['+time+'] Найдена аномалия! ' + c.name + ' (' + c.b1 + ' ➔ ' + c.b2 + ') Спред: +' + c.spread.toFixed(2) + '%</div>' + log.innerHTML;
+                        log.innerHTML = '<div style="color:#f59e0b;">['+time+'] Найдена аномалия! ' + c.name + ' Спред: +' + c.spread.toFixed(2) + '%</div>' + log.innerHTML;
                     }
                 }
             });
-
-            renderGrid();
-            updateDetailBlock();
-        }, 2000);
+        }, 3000);
 
         function drawChart() {
             const canvas = document.getElementById('liveChart');
@@ -458,6 +479,7 @@
             if(localStorage.getItem('bot_ema2')) document.getElementById('input-ema2').value = localStorage.getItem('bot_ema2');
             
             switchMode('signals');
+            initWebSocket(); // Запуск соединения с реальной биржей
         };
     </script>
 </body>
