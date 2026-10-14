@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+PE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8">
@@ -30,6 +30,7 @@
         .coins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
         .coin-card { background: #12161c; border: 1px solid #1f2630; border-radius: 6px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; transition: background-color 0.4s, border-color 0.2s; overflow: hidden; }
         .coin-card:hover { border-color: #f7a600; }
+        .coin-card.selected { outline: 2px solid #2563eb; outline-offset: 1px; }
         .coin-card.scanning-mode { background-color: #1b222c !important; border-color: #4a5568 !important; animation: pulseGlow 1.5s infinite; }
         @keyframes pulseGlow { 0% { opacity: 0.7; } 50% { opacity: 1; } 100% { opacity: 0.7; } }
         .coin-card.new-signal { background-color: #00b159 !important; border-color: #00ff73 !important; color: #ffffff !important; }
@@ -127,6 +128,9 @@
                         <div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div>Цена рынка</div>
                     </div>
                 </div>
+                <div id="arb-data-warning" style="display:none; padding:8px 10px; border:1px solid #f59e0b; border-radius:6px; color:#fbbf24; font-size:11px; line-height:1.5;">
+                    Используются реальные публичные котировки. MEXC Spot, HTX Perp и KuCoin Spot/Perp обновляются REST каждые 3 секунды, остальные рынки — через WebSocket. Это только мониторинг: комиссии, funding, глубина стакана и возможность исполнения не учтены.
+                </div>
                 <canvas id="liveChart" width="600" height="150" style="height:150px; background: #161b22; border-radius: 6px;"></canvas>
                 <div style="font-size:10px; font-weight:700; color:#848e9c; text-transform:uppercase; margin-top:4px; border-top:1px solid #1f2630; padding-top:6px;">📋 Журнал аномальных связок (≥1.50%):</div>
                 <div id="arb-history-log" style="background:#0b0e11; border:1px solid #1f2630; border-radius:6px; padding:8px; height:80px; overflow-y:auto; font-family:monospace; font-size:11px; display:flex; flex-direction:column; gap:4px; color:#848e9c;">
@@ -161,52 +165,138 @@
         ];
         const ARB_ONLY_COINS = [
             { name: 'RVN/USDT', type: 'NONE', price: 0.0210, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 1.65, arbMinutes: 60, ticker: 'rvnusdt', trend: 'SCAN' },
-            { name: 'TON/USDT', type: 'NONE', price: 6.45, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0.22, arbMinutes: 80, ticker: 'tonusdt', trend: 'SCAN' },
             { name: 'WIF/USDT', type: 'NONE', price: 3.12, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'MEXC', b2: 'Gate', spread: 1.85, arbMinutes: 45, ticker: 'wifusdt', trend: 'SCAN' },
             { name: 'XLM/USDT', type: 'NONE', price: 0.24, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Binance', b2: 'HTX', spread: 0.19, arbMinutes: 120, ticker: 'xlmusdt', trend: 'SCAN' },
             { name: 'APT/USDT', type: 'NONE', price: 9.80, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 0.31, arbMinutes: 90, ticker: 'aptusdt', trend: 'SCAN' },
             { name: 'AVAX/USDT', type: 'NONE', price: 32.40, leverage: 20, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'Gate', spread: 0.26, arbMinutes: 110, ticker: 'avaxusdt', trend: 'SCAN' },
             { name: 'OP/USDT', type: 'NONE', price: 1.95, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Binance', b2: 'Gate', spread: 0.34, arbMinutes: 75, ticker: 'opusdt', trend: 'SCAN' },
             { name: 'ARB/USDT', type: 'NONE', price: 0.68, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.28, arbMinutes: 65, ticker: 'arbusdt', trend: 'SCAN' },
-            { name: 'MATIC/USDT', type: 'NONE', price: 0.44, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0.17, arbMinutes: 140, ticker: 'maticusdt', trend: 'SCAN' },
             { name: 'FIL/USDT', type: 'NONE', price: 3.90, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'HTX', spread: 0.41, arbMinutes: 130, ticker: 'filusdt', trend: 'SCAN' },
-            { name: 'FTM/USDT', type: 'NONE', price: 0.74, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'MEXC', b2: 'OKX', spread: 1.92, arbMinutes: 40, ticker: 'ftmusdt', trend: 'SCAN' },
             { name: 'INJ/USDT', type: 'NONE', price: 21.60, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Binance', spread: 0.29, arbMinutes: 85, ticker: 'injusdt', trend: 'SCAN' },
             { name: 'PEPE/USDT', type: 'NONE', price: 0.000012, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'MEXC', b2: 'Bybit', spread: 2.10, arbMinutes: 35, ticker: 'pepeusdt', trend: 'SCAN' },
             { name: 'SHIB/USDT', type: 'NONE', price: 0.000022, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'Gate', spread: 1.75, arbMinutes: 50, ticker: 'shibusdt', trend: 'SCAN' },
             { name: 'FET/USDT', type: 'NONE', price: 1.58, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'Binance', b2: 'MEXC', spread: 1.55, arbMinutes: 70, ticker: 'fetusdt', trend: 'SCAN' },
             { name: 'TIA/USDT', type: 'NONE', price: 5.12, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'Bybit', spread: 0.65, arbMinutes: 90, ticker: 'tiausdt', trend: 'SCAN' },
-            { name: 'RNDR/USDT', type: 'NONE', price: 7.40, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 2.30, arbMinutes: 45, ticker: 'renderusdt', trend: 'SCAN' },
-            { name: 'SND/USDT', type: 'NONE', price: 0.32, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'OKX', spread: 0.12, arbMinutes: 110, ticker: 'sandusdt', trend: 'SCAN' },
+            { name: 'RENDER/USDT', type: 'NONE', price: 7.40, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 2.30, arbMinutes: 45, ticker: 'renderusdt', trend: 'SCAN' },
+            { name: 'SAND/USDT', type: 'NONE', price: 0.32, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Gate', b2: 'OKX', spread: 0.12, arbMinutes: 110, ticker: 'sandusdt', trend: 'SCAN' },
             { name: 'STX/USDT', type: 'NONE', price: 1.98, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'MEXC', spread: 1.98, arbMinutes: 55, ticker: 'stxusdt', trend: 'SCAN' },
             { name: 'GRT/USDT', type: 'NONE', price: 0.18, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'HTX', b2: 'MEXC', spread: 0.48, arbMinutes: 55, ticker: 'grtusdt', trend: 'SCAN' },
             { name: 'CRV/USDT', type: 'NONE', price: 0.29, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'Gate', spread: 0.52, arbMinutes: 30, ticker: 'crvusdt', trend: 'SCAN' },
             { name: 'GALA/USDT', type: 'NONE', price: 0.03, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'MEXC', b2: 'Binance', spread: 0.61, arbMinutes: 42, ticker: 'galausdt', trend: 'SCAN' },
-            { name: 'ICP/USDT', type: 'NONE', price: 8.90, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'HTX', spread: 0.23, arbMinutes: 15, ticker: 'icpusdt', trend: 'SCAN' }
+            { name: 'ICP/USDT', type: 'NONE', price: 8.90, leverage: 15, totalMinutes: 0, accuracy: 0, b1: 'OKX', b2: 'HTX', spread: 0.23, arbMinutes: 15, ticker: 'icpusdt', trend: 'SCAN' },
+            { name: 'BCH/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'bchusdt', trend: 'SCAN' },
+            { name: 'ETC/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'etcusdt', trend: 'SCAN' },
+            { name: 'UNI/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'uniusdt', trend: 'SCAN' },
+            { name: 'AAVE/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'aaveusdt', trend: 'SCAN' },
+            { name: 'HBAR/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'hbarusdt', trend: 'SCAN' },
+            { name: 'ALGO/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'algousdt', trend: 'SCAN' },
+            { name: 'VET/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'vetusdt', trend: 'SCAN' },
+            { name: 'XTZ/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'xtzusdt', trend: 'SCAN' },
+            { name: 'ZEC/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'zecusdt', trend: 'SCAN' },
+            { name: 'COMP/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'compusdt', trend: 'SCAN' },
+            { name: 'AXS/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'axsusdt', trend: 'SCAN' },
+            { name: 'MANA/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'manausdt', trend: 'SCAN' },
+            { name: 'KAVA/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'kavausdt', trend: 'SCAN' },
+            { name: 'LDO/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'ldousdt', trend: 'SCAN' },
+            { name: 'SEI/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'seiusdt', trend: 'SCAN' },
+            { name: 'JUP/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'jupusdt', trend: 'SCAN' },
+            { name: 'WLD/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'wldusdt', trend: 'SCAN' },
+            { name: 'ONDO/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'ondousdt', trend: 'SCAN' },
+            { name: 'RUNE/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'runeusdt', trend: 'SCAN' },
+            { name: 'ENA/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'enausdt', trend: 'SCAN' },
+            { name: 'PENDLE/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'pendleusdt', trend: 'SCAN' },
+            { name: 'DYDX/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'dydxusdt', trend: 'SCAN' },
+            { name: 'FLOKI/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'flokiusdt', trend: 'SCAN' },
+            { name: 'BONK/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'bonkusdt', trend: 'SCAN' },
+            { name: 'PEOPLE/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'peopleusdt', trend: 'SCAN' },
+            { name: 'ORDI/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'ordiusdt', trend: 'SCAN' }
         ];
         const ARB_EXT2 = [], ARB_EXT3 = [];
-        const EXCHANGES = ['Bybit', 'OKX', 'Gate', 'MEXC', 'HTX'];
+        const EXCHANGES = ['Bybit', 'OKX', 'Gate', 'MEXC', 'HTX', 'KuCoin'];
+        const ARB_MIN_SPREAD = 1.50;
+        const ARB_STABLE_FOR_MS = 30000;
+        const ARB_SAMPLE_INTERVAL_MS = 5000;
+        const ARB_MAX_SPREAD_VARIATION = 0.20;
+        const ARB_MAX_PRICE_VARIATION = 0.50;
+        const QUOTE_MAX_AGE_MS = 15000;
         const ALL_ARB_COINS = COINS.concat(ARB_ONLY_COINS, ARB_EXT2, ARB_EXT3);
         let priceHistory = Array.from(new Array(40), function() { return 92450; });
 
-        function ensurePriceMap(coin, price) {
-            const basePrice = Number.isFinite(price) ? price : Number(coin.price) || 0;
-            coin.prices = coin.prices || {};
-            coin.prices.Bybit = basePrice;
-            coin.prices.OKX = basePrice * (1 + (Math.random() * 0.04 - 0.015));
-            coin.prices.Gate = basePrice * (1 + (Math.random() * 0.03 - 0.01));
-            coin.prices.MEXC = basePrice * (1 + (Math.random() * 0.05 - 0.02));
-            coin.prices.HTX = basePrice * (1 + (Math.random() * 0.05 - 0.02));
-            const arr = [coin.prices.Bybit, coin.prices.OKX, coin.prices.Gate, coin.prices.MEXC, coin.prices.HTX];
-            const min = Math.min.apply(null, arr), max = Math.max.apply(null, arr);
-            coin.spread = ((max - min) / min) * 100;
-            return coin;
+        function splitSymbol(coin) {
+            const parts = coin.name.split('/');
+            return { base: parts[0], quote: parts[1] };
+        }
+
+        function formatMarketPrice(price) {
+            if (!Number.isFinite(price) || price <= 0) return '—';
+            return price >= 1 ? price.toFixed(4) : price.toPrecision(6).replace(/\.?0+$/, '');
+        }
+
+        function freshQuote(coin, market, exchange, now) {
+            const prices = market === 'spot' ? coin.prices : coin.futuresPrices;
+            const times = market === 'spot' ? coin.priceTimes : coin.futuresPriceTimes;
+            const price = prices && Number(prices[exchange]);
+            const at = times && Number(times[exchange]);
+            if (!Number.isFinite(price) || price <= 0 || !at || now - at > QUOTE_MAX_AGE_MS) return null;
+            return { exchange: exchange, price: price, at: at };
+        }
+
+        function updateArbStability(coin, now) {
+            const pair = getArbPair(coin);
+            if (!pair) {
+                coin.arbStable = false;
+                coin.arbSamples = [];
+                coin.arbRoute = '';
+                coin.arbLastSampleAt = 0;
+                return;
+            }
+            const route = pair.buyExchange + '>' + pair.sellExchange;
+            if (pair.spread < ARB_MIN_SPREAD || !Number.isFinite(pair.spread)) {
+                coin.arbStable = false;
+                coin.arbSamples = [];
+                coin.arbRoute = '';
+                coin.arbLastSampleAt = 0;
+                return;
+            }
+
+            if (coin.arbRoute !== route) {
+                coin.arbRoute = route;
+                coin.arbSamples = [];
+                coin.arbStable = false;
+                coin.arbLastSampleAt = 0;
+            }
+            if (now - (coin.arbLastSampleAt || 0) < ARB_SAMPLE_INTERVAL_MS) return;
+
+            coin.arbLastSampleAt = now;
+            coin.arbSamples = coin.arbSamples || [];
+            coin.arbSamples.push({ at: now, spread: pair.spread, buyPrice: pair.buyPrice, sellPrice: pair.sellPrice });
+            coin.arbSamples = coin.arbSamples.filter(function(sample) {
+                return now - sample.at <= ARB_STABLE_FOR_MS + 15000;
+            });
+
+            const first = coin.arbSamples[0];
+            const spreads = coin.arbSamples.map(function(sample) { return sample.spread; });
+            const variation = Math.max.apply(null, spreads) - Math.min.apply(null, spreads);
+            const buyPrices = coin.arbSamples.map(function(sample) { return sample.buyPrice; });
+            const sellPrices = coin.arbSamples.map(function(sample) { return sample.sellPrice; });
+            const buyAverage = buyPrices.reduce(function(sum, price) { return sum + price; }, 0) / buyPrices.length;
+            const sellAverage = sellPrices.reduce(function(sum, price) { return sum + price; }, 0) / sellPrices.length;
+            const buyVariation = ((Math.max.apply(null, buyPrices) - Math.min.apply(null, buyPrices)) / buyAverage) * 100;
+            const sellVariation = ((Math.max.apply(null, sellPrices) - Math.min.apply(null, sellPrices)) / sellAverage) * 100;
+            coin.arbStable = coin.arbSamples.length >= 6 &&
+                first && now - first.at >= ARB_STABLE_FOR_MS &&
+                variation <= ARB_MAX_SPREAD_VARIATION &&
+                buyVariation <= ARB_MAX_PRICE_VARIATION &&
+                sellVariation <= ARB_MAX_PRICE_VARIATION;
         }
 
         function loadInitialPrices() {
             ALL_ARB_COINS.forEach(function(coin) {
-                coin.prices = coin.prices || {};
-                ensurePriceMap(coin, coin.price);
+                coin.prices = {};
+                coin.futuresPrices = {};
+                coin.priceTimes = {};
+                coin.futuresPriceTimes = {};
+                updateArbStability(coin, Date.now());
             });
 
             const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
@@ -214,19 +304,18 @@
                 priceHistory = Array.from(new Array(40), function() { return activeList[selectedCoinIndex].price; });
             }
             renderGrid(); updateDetailBlock();
-            initWebSocket();
+            initMarketData();
         }
 
         window.processBybit = function(data) {
             if (data && data.result && data.result.list) {
                 const list = data.result.list;
-                ALL_ARB_COINS.forEach(function(coin) {
+                COINS.forEach(function(coin) {
                     const symb = coin.name.replace('/', '');
                     const m = list.find(function(i) { return i.symbol === symb; });
                     if (m && m.lastPrice) {
                         const p = parseFloat(m.lastPrice);
                         coin.price = p;
-                        ensurePriceMap(coin, p);
                     }
                 });
                 const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
@@ -237,12 +326,31 @@
             }
         };
 
-        let ws;
-        function initWebSocket() {
+        const marketSockets = [];
+        function initMarketData() {
+            initSignalWebSocket();
+            EXCHANGES.forEach(function(exchange) {
+                if (exchange === 'MEXC') {
+                    initRestTickerFeed(exchange, 'spot');
+                    initExchangeFeed(exchange, 'perpetual');
+                } else if (exchange === 'HTX') {
+                    initExchangeFeed(exchange, 'spot');
+                    initRestTickerFeed(exchange, 'perpetual');
+                } else if (exchange === 'KuCoin') {
+                    initRestTickerFeed(exchange, 'spot');
+                    initRestTickerFeed(exchange, 'perpetual');
+                } else {
+                    initExchangeFeed(exchange, 'spot');
+                    initExchangeFeed(exchange, 'perpetual');
+                }
+            });
+        }
+
+        function initSignalWebSocket() {
             const streams = ALL_ARB_COINS.map(function(c) {
                 return (c.ticker || c.name.replace('/', '').toLowerCase()) + '@ticker';
             }).join('/');
-            ws = new WebSocket('wss://stream.binance.com:9443/stream?streams=' + streams);
+            const ws = new WebSocket('wss://stream.binance.com:9443/stream?streams=' + streams);
             ws.onmessage = function(event) {
                 if (!isRunning) return;
                 try {
@@ -256,21 +364,345 @@
                         const realPrice = parseFloat(tickerData.c);
                         if (!Number.isNaN(realPrice)) {
                             coin.price = realPrice;
-                            ensurePriceMap(coin, realPrice);
                             const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
                             if (activeList[selectedCoinIndex] && activeList[selectedCoinIndex].ticker === tk) {
                                 priceHistory.push(realPrice);
                                 if (priceHistory.length > 40) priceHistory.shift();
                                 drawChart();
+                                updateDetailBlock();
                             }
-                            renderGrid(); updateDetailBlock();
+                            const card = document.querySelector('.coin-card[data-ticker="' + tk + '"]');
+                            const priceElement = card && card.querySelector('.coin-price');
+                            if (priceElement && currentMode === 'signals') {
+                                priceElement.innerText = realPrice.toFixed(4);
+                            }
                         }
                     }
                 } catch (err) {
                     console.warn('WebSocket payload parse failed:', err);
                 }
             };
-            ws.onclose = function() { setTimeout(initWebSocket, 5000); };
+            ws.onclose = function() { setTimeout(initSignalWebSocket, 5000); };
+        }
+
+        function initRestTickerFeed(exchange, market) {
+            let url;
+            if (exchange === 'MEXC') {
+                url = 'https://api.mexc.com/api/v3/ticker/price';
+            } else if (exchange === 'KuCoin') {
+                url = market === 'spot'
+                    ? 'https://api.kucoin.com/api/v1/market/allTickers'
+                    : 'https://api-futures.kucoin.com/api/v1/allTickers';
+            } else {
+                url = 'https://api.hbdm.com/linear-swap-ex/market/detail/batch_merged';
+            }
+            let requestInProgress = false;
+            const updateQuotes = async function() {
+                if (requestInProgress) return;
+                requestInProgress = true;
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    const payload = await response.json();
+                    let quotes;
+                    if (exchange === 'MEXC') {
+                        if (!Array.isArray(payload)) throw new Error('Unexpected ticker response');
+                        quotes = payload.map(function(row) {
+                            return { symbol: row.symbol, price: Number(row.price) };
+                        });
+                    } else if (exchange === 'KuCoin') {
+                        if (payload.code !== '200000') {
+                            throw new Error(payload.msg || 'KuCoin ticker request failed');
+                        }
+                        const rows = market === 'spot' ? payload.data && payload.data.ticker : payload.data;
+                        if (!Array.isArray(rows)) throw new Error('Unexpected KuCoin ticker response');
+                        quotes = rows.map(function(row) {
+                            return {
+                                symbol: row.symbol,
+                                price: Number(market === 'spot' ? row.last : row.price)
+                            };
+                        });
+                    } else {
+                        if (payload.status !== 'ok' || !Array.isArray(payload.ticks)) {
+                            throw new Error(payload['err-msg'] || 'Unexpected ticker response');
+                        }
+                        quotes = payload.ticks.map(function(row) {
+                            return { symbol: row.contract_code, price: Number(row.close) };
+                        });
+                    }
+                    const pricesBySymbol = new Map(quotes.map(function(quote) {
+                        const symbol = quote.symbol.replace(/[-_]/g, '').toUpperCase()
+                            .replace(/^XBT/, 'BTC').replace(/USDTM$/, 'USDT');
+                        return [symbol, quote.price];
+                    }));
+                    ALL_ARB_COINS.forEach(function(coin) {
+                        const symbol = coin.name.replace('/', '').toUpperCase();
+                        const price = pricesBySymbol.get(symbol);
+                        if (Number.isFinite(price) && price > 0) {
+                            setMarketQuote(coin, exchange, market, price);
+                        }
+                    });
+                } catch (err) {
+                    console.warn(exchange + ' ' + market + ' REST quote update failed:', err);
+                } finally {
+                    requestInProgress = false;
+                }
+            };
+            updateQuotes();
+            setInterval(updateQuotes, 3000);
+        }
+
+        function initExchangeFeed(exchange, market) {
+            const config = getFeedConfig(exchange, market);
+            if (!config) return;
+            let socket;
+            try {
+                socket = new WebSocket(config.url);
+                marketSockets.push(socket);
+            } catch (err) {
+                console.error(exchange + ' ' + market + ' WebSocket initialization failed:', err);
+                setTimeout(function() { initExchangeFeed(exchange, market); }, 5000);
+                return;
+            }
+
+            socket.onopen = function() {
+                config.subscribe(socket);
+            };
+            socket.onmessage = async function(event) {
+                try {
+                    const payload = await decodeFeedMessage(event.data, config.compressed);
+                    if (!payload) return;
+                    if (payload.ping !== undefined) {
+                        socket.send(JSON.stringify({ pong: payload.ping }));
+                        return;
+                    }
+                    if (payload === 'ping') {
+                        socket.send('pong');
+                        return;
+                    }
+                    if (payload.op === 'ping') {
+                        socket.send(JSON.stringify({ op: 'pong' }));
+                        return;
+                    }
+                    if (payload.method === 'PING' || payload.method === 'ping') {
+                        socket.send(JSON.stringify({ method: 'PONG' }));
+                        return;
+                    }
+                    if (payload.event === 'ping') {
+                        socket.send(JSON.stringify({ time: payload.time, channel: payload.channel, event: 'pong' }));
+                        return;
+                    }
+                    if (payload.event === 'error' || payload.code && payload.msg || payload.error) {
+                        console.warn(exchange + ' ' + market + ' feed error:', payload.msg || payload);
+                        return;
+                    }
+                    const updates = parseFeedQuotes(exchange, market, payload);
+                    updates.forEach(function(update) {
+                        const coin = ALL_ARB_COINS.find(function(item) {
+                            return item.name.replace('/', '').toUpperCase() === update.symbol.toUpperCase();
+                        });
+                        if (coin) setMarketQuote(coin, exchange, market, update.price);
+                    });
+                } catch (err) {
+                    console.warn(exchange + ' ' + market + ' message processing failed:', err);
+                }
+            };
+            socket.onerror = function() {
+                console.warn(exchange + ' ' + market + ' WebSocket connection error.');
+            };
+            socket.onclose = function() {
+                setTimeout(function() { initExchangeFeed(exchange, market); }, 5000);
+            };
+            if (config.ping) {
+                const pingTimer = setInterval(function() {
+                    if (socket.readyState === WebSocket.OPEN) config.ping(socket);
+                    else clearInterval(pingTimer);
+                }, 20000);
+            }
+        }
+
+        function getFeedConfig(exchange, market) {
+            const symbols = ALL_ARB_COINS.map(splitSymbol);
+            const subscribeBybit = function(socket) {
+                const topics = ALL_ARB_COINS.map(function(coin) {
+                    const symbol = splitSymbol(coin);
+                    return 'tickers.' + symbol.base + symbol.quote;
+                });
+                for (let i = 0; i < topics.length; i += 10) {
+                    socket.send(JSON.stringify({ op: 'subscribe', args: topics.slice(i, i + 10) }));
+                }
+            };
+            if (exchange === 'Bybit') {
+                return {
+                    url: 'wss://stream.bybit.com/v5/public/' + (market === 'spot' ? 'spot' : 'linear'),
+                    subscribe: subscribeBybit,
+                    ping: function(socket) { socket.send(JSON.stringify({ op: 'ping' })); }
+                };
+            }
+            if (exchange === 'OKX') {
+                return {
+                    url: 'wss://ws.okx.com:8443/ws/v5/public',
+                    subscribe: function(socket) {
+                        const args = symbols.map(function(symbol) {
+                            return {
+                                channel: 'tickers',
+                                instId: symbol.base + '-' + symbol.quote + (market === 'spot' ? '' : '-SWAP')
+                            };
+                        });
+                        socket.send(JSON.stringify({ op: 'subscribe', args: args }));
+                    },
+                    ping: function(socket) { socket.send('ping'); }
+                };
+            }
+            if (exchange === 'Gate') {
+                return {
+                    url: market === 'spot' ? 'wss://api.gateio.ws/ws/v4/' : 'wss://fx-ws.gateio.ws/v4/ws/usdt',
+                    subscribe: function(socket) {
+                        sendFeedMessages(socket, symbols.map(function(symbol) {
+                            return {
+                                time: Math.floor(Date.now() / 1000),
+                                channel: market === 'spot' ? 'spot.tickers' : 'futures.tickers',
+                                event: 'subscribe',
+                                payload: [symbol.base + '_' + symbol.quote]
+                            };
+                        }));
+                    }
+                };
+            }
+            if (exchange === 'MEXC') {
+                return {
+                    url: market === 'spot' ? 'wss://wbs-api.mexc.com/ws' : 'wss://contract.mexc.com/edge',
+                    subscribe: function(socket) {
+                        if (market === 'spot') {
+                            sendFeedMessages(socket, symbols.map(function(symbol, index) {
+                                return {
+                                    method: 'SUBSCRIPTION',
+                                    params: ['spot@public.miniTicker.v3.api@' + symbol.base + symbol.quote],
+                                    id: index + 1
+                                };
+                            }));
+                        } else {
+                            sendFeedMessages(socket, symbols.map(function(symbol) {
+                                return {
+                                    method: 'sub.ticker',
+                                    param: { symbol: symbol.base + '_' + symbol.quote }
+                                };
+                            }));
+                        }
+                    },
+                    ping: function(socket) {
+                        socket.send(JSON.stringify({ method: market === 'spot' ? 'PING' : 'ping' }));
+                    }
+                };
+            }
+            return {
+                url: market === 'spot' ? 'wss://api.huobi.pro/ws' : 'wss://api.hbdm.com/linear-swap-ws',
+                compressed: true,
+                subscribe: function(socket) {
+                    const subscriptions = symbols.map(function(symbol, index) {
+                        const instrument = market === 'spot'
+                            ? symbol.base.toLowerCase() + symbol.quote.toLowerCase()
+                            : symbol.base + '-' + symbol.quote;
+                        return {
+                            sub: 'market.' + instrument + '.ticker',
+                            id: exchange + '-' + market + '-' + index
+                        };
+                    });
+                    sendFeedMessages(socket, subscriptions);
+                }
+            };
+        }
+
+        function sendFeedMessages(socket, messages) {
+            messages.forEach(function(message, index) {
+                setTimeout(function() {
+                    if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
+                }, index * 100);
+            });
+        }
+
+        async function decodeFeedMessage(data, compressed) {
+            let text;
+            if (typeof data === 'string') {
+                text = data;
+            } else {
+                const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
+                if (compressed && typeof DecompressionStream !== 'undefined') {
+                    const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip'));
+                    text = await new Response(stream).text();
+                } else {
+                    text = new TextDecoder().decode(buffer);
+                }
+            }
+            if (text === 'ping' || text === 'pong') return text;
+            return JSON.parse(text);
+        }
+
+        function parseFeedQuotes(exchange, market, payload) {
+            const source = payload.data !== undefined ? payload.data :
+                (payload.result !== undefined ? payload.result : payload);
+            const rows = Array.isArray(source) ? source : [source];
+            return rows.map(function(row) {
+                if (!row) return null;
+                let symbol = '';
+                let price = NaN;
+                if (exchange === 'Bybit') {
+                    symbol = row.symbol || (payload.topic || '').split('.').pop() || '';
+                    price = Number(row.lastPrice);
+                } else if (exchange === 'OKX') {
+                    symbol = (payload.arg && payload.arg.instId) || row.instId || '';
+                    symbol = symbol.replace(/-SWAP$/, '').replace('-', '');
+                    price = Number(row.last);
+                } else if (exchange === 'Gate') {
+                    symbol = row.currency_pair || row.contract || '';
+                    symbol = symbol.replace('_', '');
+                    price = Number(row.last || row.last_price);
+                } else if (exchange === 'MEXC') {
+                    const data = row.d || row;
+                    symbol = data.s || row.symbol || (row.c || '').split('@').pop() || '';
+                    symbol = symbol.replace('_', '');
+                    price = Number(data.p || data.lastPrice || data.last || data.c);
+                } else if (exchange === 'HTX') {
+                    symbol = (payload.ch || '').replace(/^market\./, '').replace(/\.ticker$/, '').replace('-', '');
+                    price = Number(row.tick && (row.tick.close || row.tick.lastPrice) || row.close);
+                    if (market === 'spot') symbol = symbol.toUpperCase();
+                }
+                symbol = symbol.replace(/[-_]/g, '').toUpperCase();
+                return symbol && Number.isFinite(price) && price > 0 ? { symbol: symbol, price: price } : null;
+            }).filter(Boolean);
+        }
+
+        function setMarketQuote(coin, exchange, market, price) {
+            const now = Date.now();
+            const prices = market === 'spot' ? coin.prices : coin.futuresPrices;
+            const times = market === 'spot' ? coin.priceTimes : coin.futuresPriceTimes;
+            prices[exchange] = price;
+            times[exchange] = now;
+
+            const wasStable = coin.arbStable;
+            updateArbStability(coin, now);
+            if (currentMode === 'arbitrage' && wasStable !== coin.arbStable) {
+                renderGrid();
+                updateArbCount();
+            }
+            if (currentMode === 'arbitrage') updateArbCard(coin);
+            if (ALL_ARB_COINS[selectedCoinIndex] === coin && currentMode === 'arbitrage') updateDetailBlock();
+        }
+
+        function updateArbCard(coin) {
+            const card = document.querySelector('.coin-card[data-ticker="' + coin.ticker + '"]');
+            const pair = getArbPair(coin);
+            if (!card || !pair) return;
+            const spread = card.querySelector('.coin-price');
+            const buy = card.querySelector('.arb-buy-exchange');
+            const sell = card.querySelector('.arb-sell-exchange');
+            const summary = card.querySelector('.coin-arb-summary');
+            if (spread) spread.innerText = '+' + pair.spread.toFixed(2) + '%';
+            if (buy) buy.innerText = pair.buyExchange;
+            if (sell) sell.innerText = pair.sellExchange;
+            if (summary) summary.innerText = '✅ BUY SPOT $10 / SHORT PERP $10 • ' +
+                pair.buyExchange + ' ' + formatMarketPrice(pair.buyPrice) + ' / ' +
+                pair.sellExchange + ' ' + formatMarketPrice(pair.sellPrice);
         }
         function saveSettings() {
             localStorage.setItem('bot_deposit', document.getElementById('input-deposit').value);
@@ -280,38 +712,60 @@
         }
 
         function getArbPair(coin) {
-            const prices = coin.prices || {};
-            const entries = EXCHANGES.map(function(exchange) {
-                return {
-                    exchange: exchange,
-                    price: Number(prices[exchange]) || Number(coin.price) || 0
-                };
+            const now = Date.now();
+            const spotQuotes = EXCHANGES.map(function(exchange) {
+                return freshQuote(coin, 'spot', exchange, now);
+            }).filter(Boolean);
+            const futuresQuotes = EXCHANGES.map(function(exchange) {
+                return freshQuote(coin, 'perpetual', exchange, now);
+            }).filter(Boolean);
+            let bestPair = null;
+            spotQuotes.forEach(function(spot) {
+                futuresQuotes.forEach(function(perpetual) {
+                    if (spot.exchange === perpetual.exchange) return;
+                    const spread = ((perpetual.price - spot.price) / spot.price) * 100;
+                    if (!bestPair || spread > bestPair.spread) {
+                        bestPair = {
+                            buyExchange: spot.exchange,
+                            sellExchange: perpetual.exchange,
+                            buyPrice: spot.price,
+                            sellPrice: perpetual.price,
+                            spread: spread
+                        };
+                    }
+                });
             });
-            const buy = entries.reduce(function(best, current) { return current.price < best.price ? current : best; });
-            const sell = entries.reduce(function(best, current) { return current.price > best.price ? current : best; });
+            if (!bestPair || bestPair.spread <= 0) return null;
+            coin.spread = bestPair.spread;
             const tradeVolume = 10;
             const reservePerExchange = 100;
-            const expectedProfit = ((sell.price - buy.price) / buy.price) * tradeVolume;
+            const convergencePrice = (bestPair.buyPrice + bestPair.sellPrice) / 2;
+            const expectedProfit = tradeVolume * convergencePrice *
+                (1 / bestPair.buyPrice - 1 / bestPair.sellPrice);
             return {
-                buyExchange: buy.exchange,
-                sellExchange: sell.exchange,
-                buyPrice: buy.price,
-                sellPrice: sell.price,
-                spread: Number(coin.spread) || 0,
+                buyExchange: bestPair.buyExchange,
+                sellExchange: bestPair.sellExchange,
+                buyPrice: bestPair.buyPrice,
+                sellPrice: bestPair.sellPrice,
+                spread: bestPair.spread,
                 tradeVolume: tradeVolume,
                 reservePerExchange: reservePerExchange,
                 expectedProfit: expectedProfit,
-                entries: entries
+                spotQuotes: spotQuotes,
+                futuresQuotes: futuresQuotes
             };
         }
 
         function renderExchangePrices(coin) {
             const grid = document.getElementById('exchange-prices-grid');
             if (!grid) return;
-            const prices = (coin && coin.prices) ? coin.prices : {};
             const rows = EXCHANGES.map(function(exchange) {
-                const value = Number(prices[exchange]);
-                return '<div class="exchange-price-row"><span>' + exchange + '</span><strong>' + (Number.isFinite(value) ? value.toFixed(4) : '0.0000') + '</strong></div>';
+                const spot = coin ? freshQuote(coin, 'spot', exchange, Date.now()) : null;
+                const perpetual = coin ? freshQuote(coin, 'perpetual', exchange, Date.now()) : null;
+                return '<div class="exchange-price-row"><span>' + exchange +
+                    '<br>Spot <strong>' + (spot ? formatMarketPrice(spot.price) : 'нет данных') +
+                    '</strong><br>Perp <strong>' + (perpetual ? formatMarketPrice(perpetual.price) : 'нет данных') +
+                    '</strong></span></div>';
             }).join('');
             grid.innerHTML = rows;
         }
@@ -329,21 +783,37 @@
                 document.getElementById('target-boxes-zone').style.display = 'grid';
                 document.getElementById('legends-zone').innerHTML = '<div class="legend-item"><div class="legend-dot" style="background:#2563eb;"></div>Цена рынка</div>';
                 document.getElementById('trade-scheme').style.display = 'none';
+                document.getElementById('arb-data-warning').style.display = 'none';
                 selectedCoinIndex = 9; 
             } else {
                 document.getElementById('btn-arb-mode').classList.add('active');
-                const validArb = ALL_ARB_COINS.filter(function(c) { return c.spread >= 1.50; });
+                const validArb = ALL_ARB_COINS.filter(function(c) { return c.arbStable; });
                 document.getElementById('label-total-signals').innerText = validArb.length + " Связок";
                 document.getElementById('det-price-lbl').innerText = "Разрыв цен (Спред)";
                 document.getElementById('count-scanned').innerText = ALL_ARB_COINS.length;
                 document.getElementById('slider-wrapper-zone').style.display = 'none';
                 document.getElementById('target-boxes-zone').style.display = 'none';
                 document.getElementById('legends-zone').innerHTML = '<div class="legend-item"><div class="legend-dot" style="background:#00b159;"></div>Биржа Покупки</div><div class="legend-item"><div class="legend-dot" style="background:#ff3b30;"></div>Биржа Шорта</div>';
-                let firstValid = ALL_ARB_COINS.findIndex(function(c) { return c.spread >= 1.50; });
+                let firstValid = ALL_ARB_COINS.findIndex(function(c) { return c.arbStable; });
                 selectedCoinIndex = firstValid !== -1 ? firstValid : 0; 
                 document.getElementById('trade-scheme').style.display = 'block';
+                document.getElementById('arb-data-warning').style.display = 'block';
             }
             renderGrid(); updateDetailBlock();
+        }
+
+        function updateArbCount() {
+            const stableCoins = ALL_ARB_COINS.filter(function(coin) { return coin.arbStable; });
+            const stableCount = stableCoins.length;
+            document.getElementById('label-total-signals').innerText = stableCount + " стабильных связок";
+            const selectedCoin = ALL_ARB_COINS[selectedCoinIndex];
+            if (!selectedCoin || !selectedCoin.arbStable) {
+                selectedCoinIndex = stableCount ? ALL_ARB_COINS.indexOf(stableCoins[0]) : 0;
+                const selected = ALL_ARB_COINS[selectedCoinIndex];
+                priceHistory = Array.from(new Array(40), function() { return selected ? selected.price : 0; });
+                updateDetailBlock();
+                drawChart();
+            }
         }
 
         function showToast(message, isWin) {
@@ -372,9 +842,12 @@
         function renderGrid() {
             const container = document.getElementById('coins-container'); container.innerHTML = '';
             const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
+            let renderedCount = 0;
             activeList.forEach(function(coin, idx) {
-                if (currentMode === 'arbitrage' && coin.spread < 1.50) return;
+                if (currentMode === 'arbitrage' && !coin.arbStable) return;
+                renderedCount++;
                 const card = document.createElement('div');
+                card.dataset.ticker = coin.ticker;
                 if (currentMode === 'signals') {
                     if (coin.trend === 'SCAN') {
                         card.className = 'coin-card scanning-mode';
@@ -392,15 +865,19 @@
                     const pair = getArbPair(coin);
                     card.className = 'coin-card'; card.style.backgroundColor = '#0c3c26'; 
                     card.style.borderColor = idx === selectedCoinIndex ? '#f59e0b' : '#00b159';
-                    let timerText = '⏱ BUY SPOT $' + pair.tradeVolume + ' / SHORT FUTURES $' + pair.tradeVolume;
-                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread" style="background:rgba(255,255,255,0.2); color:#fff;">' + pair.buyExchange + '</span><span class="badge-short" style="background:#f59e0b; color:#fff;">' + pair.sellExchange + '</span></div></div><div class="coin-price" style="color:#fff;">+' + coin.spread.toFixed(2) + '%</div><div style="font-size:11px; font-weight:600; opacity:0.8; color:#fff;">' + timerText + ' • ' + pair.buyExchange + ' ' + pair.buyPrice.toFixed(4) + ' / ' + pair.sellExchange + ' ' + pair.sellPrice.toFixed(4) + '</div>';
+                    let timerText = '✅ Спред и цены стабильны 30с • BUY SPOT $' + pair.tradeVolume + ' / SHORT PERP $' + pair.tradeVolume;
+                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread arb-buy-exchange" style="background:rgba(255,255,255,0.2); color:#fff;">' + pair.buyExchange + ' Spot</span><span class="badge-short arb-sell-exchange" style="background:#f59e0b; color:#fff;">' + pair.sellExchange + ' Perp</span></div></div><div class="coin-price" style="color:#fff;">+' + pair.spread.toFixed(2) + '%</div><div class="coin-arb-summary" style="font-size:11px; font-weight:600; opacity:0.8; color:#fff;">' + timerText + ' • ' + formatMarketPrice(pair.buyPrice) + ' / ' + formatMarketPrice(pair.sellPrice) + '</div>';
                 }
+                if (idx === selectedCoinIndex) card.classList.add('selected');
                 card.onclick = function() {
                     selectedCoinIndex = idx; priceHistory = Array.from(new Array(40), function() { return coin.price; });
-                    renderGrid(); updateDetailBlock();
+                    renderGrid(); updateDetailBlock(); drawChart();
                 };
                 container.appendChild(card);
             });
+            if (currentMode === 'arbitrage' && renderedCount === 0) {
+                container.innerHTML = '<div class="info-row">Пока нет стабильных связок. Жду 30 секунд стабильной цены и спреда.</div>';
+            }
         }
         function updateDetailBlock() {
             const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
@@ -438,12 +915,20 @@
             } else {
                 document.getElementById('slider-wrapper-zone').style.display = 'none'; document.getElementById('target-boxes-zone').style.display = 'none';
                 const pair = getArbPair(coin);
+                if (!coin.arbStable) {
+                    document.getElementById('det-name').innerText = 'Ожидание стабильной связки';
+                    document.getElementById('det-price').innerText = '—';
+                    document.getElementById('det-info-rows').innerText = 'Покажу пару после 30 секунд стабильной цены и спреда.';
+                    document.getElementById('trade-scheme').style.display = 'none';
+                    return;
+                }
+                if (!pair) return;
                 const scheme = document.getElementById('trade-scheme');
                 scheme.style.display = 'block';
-                scheme.innerHTML = '<div class="trade-scheme-title">Схема сделки</div><div>Резерв на бирже: <strong>$' + pair.reservePerExchange + '</strong></div><div>Доля сделки: <strong>$' + pair.tradeVolume + '</strong></div><div>Профит при схлопывании спреда: <strong>$' + pair.expectedProfit.toFixed(4) + '</strong> на 1 связку</div><div>Формула: ((' + pair.sellExchange + ' цена - ' + pair.buyExchange + ' цена) / ' + pair.buyExchange + ' цена) × $' + pair.tradeVolume + '</div>';
+                scheme.innerHTML = '<div class="trade-scheme-title">Схема сделки</div><div>Резерв на бирже: <strong>$' + pair.reservePerExchange + '</strong></div><div>Доля сделки: <strong>$' + pair.tradeVolume + '</strong> на каждую сторону</div><div>Расчётный профит при схлопывании к средней цене: <strong>$' + pair.expectedProfit.toFixed(4) + '</strong> до комиссий и funding</div><div>Оценка предполагает закрытие обеих ног по средней цене между входными котировками.</div>';
                 document.getElementById('det-name').innerText = coin.name + ' · ' + pair.buyExchange + ' BUY / ' + pair.sellExchange + ' SHORT';
-                document.getElementById('det-price').innerText = '+' + coin.spread.toFixed(2) + '%';
-                document.getElementById('det-info-rows').innerHTML = '<div>Бэкап на каждой бирже: $100. Вход: <b style="color:#00b159;">BUY SPOT $' + pair.tradeVolume + '</b> на ' + pair.buyExchange + ' и <b style="color:#ff3b30;">SHORT FUTURES $' + pair.tradeVolume + '</b> на ' + pair.sellExchange + '.</div><div>Цены: ' + pair.buyExchange + ' ' + pair.buyPrice.toFixed(4) + ' | ' + pair.sellExchange + ' ' + pair.sellPrice.toFixed(4) + ' | спред ' + coin.spread.toFixed(2) + '%</div><div>Когда спред схлопывается, закрываешь обе сделки и фиксируешь разницу без перевода монет между биржами.</div>';
+                document.getElementById('det-price').innerText = '+' + pair.spread.toFixed(2) + '%';
+                document.getElementById('det-info-rows').innerHTML = '<div>Вход: <b style="color:#00b159;">BUY SPOT $' + pair.tradeVolume + '</b> на ' + pair.buyExchange + ' и <b style="color:#ff3b30;">SHORT PERPETUAL $' + pair.tradeVolume + '</b> на ' + pair.sellExchange + '.</div><div>Реальные котировки: ' + pair.buyExchange + ' Spot ' + formatMarketPrice(pair.buyPrice) + ' | ' + pair.sellExchange + ' Perp ' + formatMarketPrice(pair.sellPrice) + ' | спред ' + pair.spread.toFixed(2) + '%</div><div>Расчёт — ориентировочный: без комиссий, funding, проскальзывания и проверки глубины стакана.</div>';
             }
         }
 
@@ -455,6 +940,16 @@
 
         setInterval(function() {
             if (!isRunning) return;
+            let stabilityChanged = false;
+            ALL_ARB_COINS.forEach(function(coin) {
+                const wasStable = coin.arbStable;
+                updateArbStability(coin, Date.now());
+                if (wasStable !== coin.arbStable) stabilityChanged = true;
+            });
+            if (currentMode === 'arbitrage' && stabilityChanged) {
+                renderGrid();
+                updateArbCount();
+            }
             let randomIdx = Math.floor(Math.random() * COINS.length); let coin = COINS[randomIdx];
             if (coin.trend === 'SCAN' && Math.random() > 0.8) {
                 coin.trend = 'SIGNAL'; coin.type = Math.random() > 0.5 ? 'LONG' : 'SHORT';
@@ -468,7 +963,7 @@
                 coin.trend = 'SCAN'; coin.type = 'NONE';
             }
             ALL_ARB_COINS.forEach(function(c) {
-                if (c.spread > 1.50) {
+                if (c.arbStable) {
                     const log = document.getElementById('arb-history-log');
                     if (log && Math.random() > 0.95) {
                         const time = new Date().toLocaleTimeString();
