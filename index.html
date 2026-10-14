@@ -49,13 +49,15 @@
         .detail-card { background: #12161c; border: 1px solid #1f2630; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px; transition: background-color 0.4s; }
         .detail-card.green-alert { background-color: #0c3c26; border-color: #00b159; }
         .detail-card.red-alert { background-color: #4a151b; border-color: #ff3b30; }
-        .detail-header-info { display: flex; justify-content: space-between; align-items: flex-start; }
-        .detail-title { font-size: 20px; font-weight: 700; font-family: monospace; display: flex; align-items: center; gap: 12px; }
+        .detail-header-info { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+        .detail-title { min-width: 0; font-size: 20px; font-weight: 700; font-family: monospace; display: flex; align-items: center; gap: 12px; overflow-wrap: anywhere; }
         .detail-main-price { font-size: 26px; font-weight: 700; font-family: monospace; color: #ffffff; }
         .info-row { font-size: 13px; color: #848e9c; line-height: 1.6; }
         .exchange-prices-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
         .exchange-price-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border: 1px solid #1f2630; border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #c9d1db; }
         .exchange-price-row strong { color: #fff; font-family: monospace; }
+        .arb-status-card { width: 100%; border: 1px solid #2d3848; border-radius: 8px; background: #161b22; padding: 14px; font-size: 13px; line-height: 1.6; color: #c9d1db; }
+        .arb-status-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
         .trade-scheme { margin-top: 8px; background: rgba(0,177,89,0.06); border: 1px solid rgba(0,177,89,0.25); border-radius: 8px; padding: 12px; color: #dfe9ee; font-size: 12px; line-height: 1.6; }
         .trade-scheme-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #84d7a9; margin-bottom: 6px; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 11px; color: #848e9c; font-weight: 600; }
@@ -67,6 +69,12 @@
         .target-box-title { font-size: 10px; color: #848e9c; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }
         .target-box-val { font-size: 14px; font-weight: 700; font-family: monospace; }
         .chart-card { background: #12161c; border: 1px solid #1f2630; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 10px; }
+        @media (max-width: 760px) {
+            header { padding: 14px 16px; flex-wrap: wrap; gap: 12px; }
+            main { padding: 0 12px; }
+            .detail-section { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+            .detail-card, .chart-card { padding: 16px; }
+        }
     </style>
 </head>
 <body>
@@ -89,10 +97,10 @@
             <button class="btn-action" id="main-btn" onclick="toggleBot()">⏹ Стоп</button>
         </section>
         <section class="grid-stats">
-            <div class="stat-card"><div class="stat-title">Монет в стратегии</div><div class="stat-value" id="count-scanned">14</div></div>
+            <div class="stat-card"><div class="stat-title">Монет в стратегии</div><div class="stat-value" id="count-scanned">60</div></div>
             <div class="stat-card"><div class="stat-title">Подтверждённые сигналы</div><div class="stat-value" id="label-total-signals" style="color:#00b159;">Загрузка</div></div>
-            <div class="stat-card"><div class="stat-title">Правило входа</div><div class="stat-value" style="font-size:16px;">EMA + RSI</div></div>
-            <div class="stat-card"><div class="stat-title">Источник / интервал</div><div class="stat-value" style="font-size:16px;">Binance · 15м</div></div>
+            <div class="stat-card signal-mode-only"><div class="stat-title">Правило входа</div><div class="stat-value" style="font-size:16px;">EMA + RSI</div></div>
+            <div class="stat-card signal-mode-only"><div class="stat-title">Источник / интервал</div><div class="stat-value" style="font-size:16px;">Binance · 15м</div></div>
         </section>
         <section class="coins-grid" id="coins-container"></section>
         <section class="detail-section">
@@ -214,12 +222,12 @@
             { name: 'ORDI/USDT', type: 'NONE', price: 0, leverage: 10, totalMinutes: 0, accuracy: 0, b1: 'Bybit', b2: 'OKX', spread: 0, arbMinutes: 0, ticker: 'ordiusdt', trend: 'SCAN' }
         ];
         const ARB_EXT2 = [], ARB_EXT3 = [];
+        const SIGNAL_COINS = COINS.concat(ARB_ONLY_COINS);
         const EXCHANGES = ['Bybit', 'OKX', 'Gate', 'MEXC', 'HTX', 'KuCoin'];
-        const ARB_MIN_SPREAD = 1.50;
-        const ARB_STABLE_FOR_MS = 30000;
+        const ARB_MIN_SPREAD = 0.50;
+        const ARB_STABLE_FOR_MS = 60000;
         const ARB_SAMPLE_INTERVAL_MS = 5000;
-        const ARB_MAX_SPREAD_VARIATION = 0.20;
-        const ARB_MAX_PRICE_VARIATION = 0.50;
+        const ARB_MAX_SPREAD_VARIATION = 0.10;
         const QUOTE_MAX_AGE_MS = 15000;
         const ALL_ARB_COINS = COINS.concat(ARB_ONLY_COINS, ARB_EXT2, ARB_EXT3);
         let priceHistory = Array.from(new Array(40), function() { return 92450; });
@@ -245,6 +253,7 @@
 
         function updateArbStability(coin, now) {
             const pair = getArbPair(coin);
+            coin.arbCandidate = Boolean(pair);
             if (!pair) {
                 coin.arbStable = false;
                 coin.arbSamples = [];
@@ -253,12 +262,13 @@
                 return;
             }
             const route = pair.buyExchange + '>' + pair.sellExchange;
-            if (pair.spread < ARB_MIN_SPREAD || !Number.isFinite(pair.spread)) {
+            if (pair.spread < ARB_MIN_SPREAD || !Number.isFinite(pair.spread) ||
+                coin.arbLastSampleAt && now - coin.arbLastSampleAt > ARB_SAMPLE_INTERVAL_MS * 2) {
                 coin.arbStable = false;
                 coin.arbSamples = [];
-                coin.arbRoute = '';
+                coin.arbRoute = route;
                 coin.arbLastSampleAt = 0;
-                return;
+                if (pair.spread < ARB_MIN_SPREAD || !Number.isFinite(pair.spread)) return;
             }
 
             if (coin.arbRoute !== route) {
@@ -279,17 +289,9 @@
             const first = coin.arbSamples[0];
             const spreads = coin.arbSamples.map(function(sample) { return sample.spread; });
             const variation = Math.max.apply(null, spreads) - Math.min.apply(null, spreads);
-            const buyPrices = coin.arbSamples.map(function(sample) { return sample.buyPrice; });
-            const sellPrices = coin.arbSamples.map(function(sample) { return sample.sellPrice; });
-            const buyAverage = buyPrices.reduce(function(sum, price) { return sum + price; }, 0) / buyPrices.length;
-            const sellAverage = sellPrices.reduce(function(sum, price) { return sum + price; }, 0) / sellPrices.length;
-            const buyVariation = ((Math.max.apply(null, buyPrices) - Math.min.apply(null, buyPrices)) / buyAverage) * 100;
-            const sellVariation = ((Math.max.apply(null, sellPrices) - Math.min.apply(null, sellPrices)) / sellAverage) * 100;
             coin.arbStable = coin.arbSamples.length >= 6 &&
                 first && now - first.at >= ARB_STABLE_FOR_MS &&
-                variation <= ARB_MAX_SPREAD_VARIATION &&
-                buyVariation <= ARB_MAX_PRICE_VARIATION &&
-                sellVariation <= ARB_MAX_PRICE_VARIATION;
+                variation <= ARB_MAX_SPREAD_VARIATION;
         }
 
         function loadInitialPrices() {
@@ -301,7 +303,7 @@
                 updateArbStability(coin, Date.now());
             });
 
-            const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
+            const activeList = currentMode === 'signals' ? SIGNAL_COINS : ALL_ARB_COINS;
             if (activeList[selectedCoinIndex]) {
                 priceHistory = Array.from(new Array(40), function() { return activeList[selectedCoinIndex].price; });
             }
@@ -313,7 +315,7 @@
         window.processBybit = function(data) {
             if (data && data.result && data.result.list) {
                 const list = data.result.list;
-                COINS.forEach(function(coin) {
+                SIGNAL_COINS.forEach(function(coin) {
                     const symb = coin.name.replace('/', '');
                     const m = list.find(function(i) { return i.symbol === symb; });
                     if (m && m.lastPrice) {
@@ -321,7 +323,7 @@
                         coin.price = p;
                     }
                 });
-                const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
+                const activeList = currentMode === 'signals' ? SIGNAL_COINS : ALL_ARB_COINS;
                 if (activeList[selectedCoinIndex]) {
                     priceHistory = Array.from(new Array(40), function() { return activeList[selectedCoinIndex].price; });
                 }
@@ -368,7 +370,7 @@
                         if (!Number.isNaN(realPrice)) {
                             coin.price = realPrice;
                             coin.signalPriceAt = Date.now();
-                            const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
+                            const activeList = currentMode === 'signals' ? SIGNAL_COINS : ALL_ARB_COINS;
                             if (activeList[selectedCoinIndex] && activeList[selectedCoinIndex].ticker === tk) {
                                 priceHistory.push(realPrice);
                                 if (priceHistory.length > 40) priceHistory.shift();
@@ -396,7 +398,7 @@
             try {
                 const fastPeriod = Math.max(2, Math.min(50, parseInt(document.getElementById('input-ema1').value, 10) || 9));
                 const slowPeriod = Math.max(fastPeriod + 1, Math.min(200, parseInt(document.getElementById('input-ema2').value, 10) || 21));
-                await Promise.all(COINS.map(async function(coin) {
+                await Promise.all(SIGNAL_COINS.map(async function(coin) {
                     try {
                         const url = 'https://api.binance.com/api/v3/klines?symbol=' +
                             encodeURIComponent(coin.ticker.toUpperCase()) + '&interval=' +
@@ -581,9 +583,9 @@
         }
 
         function updateSignalStats() {
-            const activeSignals = COINS.filter(function(coin) { return coin.trend === 'SIGNAL'; }).length;
+            const activeSignals = SIGNAL_COINS.filter(function(coin) { return coin.trend === 'SIGNAL'; }).length;
             document.getElementById('label-total-signals').innerText = activeSignals + ' подтверждённых сигналов';
-            document.getElementById('count-scanned').innerText = COINS.length;
+            document.getElementById('count-scanned').innerText = SIGNAL_COINS.length;
         }
 
         function initRestTickerFeed(exchange, market) {
@@ -881,8 +883,9 @@
             times[exchange] = now;
 
             const wasStable = coin.arbStable;
+            const wasCandidate = Boolean(coin.arbCandidate);
             updateArbStability(coin, now);
-            if (currentMode === 'arbitrage' && wasStable !== coin.arbStable) {
+            if (currentMode === 'arbitrage' && (wasStable !== coin.arbStable || wasCandidate !== coin.arbCandidate)) {
                 renderGrid();
                 updateArbCount();
             }
@@ -898,10 +901,12 @@
             const buy = card.querySelector('.arb-buy-exchange');
             const sell = card.querySelector('.arb-sell-exchange');
             const summary = card.querySelector('.coin-arb-summary');
+            const status = '✅ Спред >0,50% стабилен 60с • BUY SPOT $' +
+                pair.tradeVolume + ' / SHORT PERP $' + pair.tradeVolume;
             if (spread) spread.innerText = '+' + pair.spread.toFixed(2) + '%';
             if (buy) buy.innerText = pair.buyExchange;
             if (sell) sell.innerText = pair.sellExchange;
-            if (summary) summary.innerText = '✅ BUY SPOT $10 / SHORT PERP $10 • ' +
+            if (summary) summary.innerText = status + ' • ' +
                 pair.buyExchange + ' ' + formatMarketPrice(pair.buyPrice) + ' / ' +
                 pair.sellExchange + ' ' + formatMarketPrice(pair.sellPrice);
         }
@@ -920,23 +925,28 @@
             const futuresQuotes = EXCHANGES.map(function(exchange) {
                 return freshQuote(coin, 'perpetual', exchange, now);
             }).filter(Boolean);
-            let bestPair = null;
+            const pairs = [];
             spotQuotes.forEach(function(spot) {
                 futuresQuotes.forEach(function(perpetual) {
                     if (spot.exchange === perpetual.exchange) return;
                     const spread = ((perpetual.price - spot.price) / spot.price) * 100;
-                    if (!bestPair || spread > bestPair.spread) {
-                        bestPair = {
-                            buyExchange: spot.exchange,
-                            sellExchange: perpetual.exchange,
-                            buyPrice: spot.price,
-                            sellPrice: perpetual.price,
-                            spread: spread
-                        };
-                    }
+                    if (spread > 0) pairs.push({
+                        buyExchange: spot.exchange,
+                        sellExchange: perpetual.exchange,
+                        buyPrice: spot.price,
+                        sellPrice: perpetual.price,
+                        spread: spread
+                    });
                 });
             });
-            if (!bestPair || bestPair.spread <= 0) return null;
+            const routePair = coin.arbRoute && pairs.find(function(pair) {
+                return pair.buyExchange + '>' + pair.sellExchange === coin.arbRoute &&
+                    pair.spread >= ARB_MIN_SPREAD;
+            });
+            const bestPair = routePair || pairs.reduce(function(best, pair) {
+                return !best || pair.spread > best.spread ? pair : best;
+            }, null);
+            if (!bestPair) return null;
             coin.spread = bestPair.spread;
             const tradeVolume = 10;
             const reservePerExchange = 100;
@@ -964,8 +974,8 @@
                 const spot = coin ? freshQuote(coin, 'spot', exchange, Date.now()) : null;
                 const perpetual = coin ? freshQuote(coin, 'perpetual', exchange, Date.now()) : null;
                 return '<div class="exchange-price-row"><span>' + exchange +
-                    '<br>Spot <strong>' + (spot ? formatMarketPrice(spot.price) : 'нет данных') +
-                    '</strong><br>Perp <strong>' + (perpetual ? formatMarketPrice(perpetual.price) : 'нет данных') +
+                    '<br>Spot · последняя <strong>' + (spot ? formatMarketPrice(spot.price) : 'нет данных') +
+                    '</strong><br>Perp · последняя <strong>' + (perpetual ? formatMarketPrice(perpetual.price) : 'нет данных') +
                     '</strong></span></div>';
             }).join('');
             grid.innerHTML = rows;
@@ -975,6 +985,9 @@
             currentMode = mode;
             document.getElementById('btn-sig-mode').classList.remove('active');
             document.getElementById('btn-arb-mode').classList.remove('active');
+            document.querySelectorAll('.signal-mode-only').forEach(function(card) {
+                card.style.display = mode === 'signals' ? '' : 'none';
+            });
             if (mode === 'signals') {
                 document.getElementById('btn-sig-mode').classList.add('active');
                 updateSignalStats();
@@ -987,9 +1000,7 @@
                 selectedCoinIndex = 9; 
             } else {
                 document.getElementById('btn-arb-mode').classList.add('active');
-                const validArb = ALL_ARB_COINS.filter(function(c) { return c.arbStable; });
-                document.getElementById('label-total-signals').innerText = validArb.length + " Связок";
-                document.getElementById('det-price-lbl').innerText = "Разрыв цен (Спред)";
+                document.getElementById('det-price-lbl').innerText = "Спред сейчас";
                 document.getElementById('count-scanned').innerText = ALL_ARB_COINS.length;
                 document.getElementById('slider-wrapper-zone').style.display = 'none';
                 document.getElementById('target-boxes-zone').style.display = 'none';
@@ -999,13 +1010,19 @@
                 document.getElementById('trade-scheme').style.display = 'block';
                 document.getElementById('arb-data-warning').style.display = 'block';
             }
+            if (mode === 'arbitrage') updateArbCount();
             renderGrid(); updateDetailBlock();
         }
 
         function updateArbCount() {
             const stableCoins = ALL_ARB_COINS.filter(function(coin) { return coin.arbStable; });
             const stableCount = stableCoins.length;
-            document.getElementById('label-total-signals').innerText = stableCount + " стабильных связок";
+            const candidates = ALL_ARB_COINS.filter(function(coin) {
+                const pair = getArbPair(coin);
+                return pair && pair.spread >= ARB_MIN_SPREAD && !coin.arbStable;
+            }).length;
+            document.getElementById('label-total-signals').innerText =
+                stableCount + " стабильных связок" + (candidates ? " · проверяется " + candidates : "");
             const selectedCoin = ALL_ARB_COINS[selectedCoinIndex];
             if (!selectedCoin || !selectedCoin.arbStable) {
                 selectedCoinIndex = stableCount ? ALL_ARB_COINS.indexOf(stableCoins[0]) : 0;
@@ -1026,10 +1043,11 @@
 
         function renderGrid() {
             const container = document.getElementById('coins-container'); container.innerHTML = '';
-            const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
+            const activeList = currentMode === 'signals' ? SIGNAL_COINS : ALL_ARB_COINS;
             let renderedCount = 0;
             activeList.forEach(function(coin, idx) {
-                if (currentMode === 'arbitrage' && !coin.arbStable) return;
+                const arbPair = currentMode === 'arbitrage' ? getArbPair(coin) : null;
+                if (currentMode === 'arbitrage' && (!arbPair || !coin.arbStable)) return;
                 renderedCount++;
                 const card = document.createElement('div');
                 card.dataset.ticker = coin.ticker;
@@ -1044,11 +1062,11 @@
                         card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><span class="' + (coin.type === 'LONG' ? 'badge-long' : 'badge-short') + '">' + coin.type + '</span></div><div class="coin-price" style="color:#fff;">' + coin.price.toFixed(4) + '</div><div style="font-size:11px; font-weight:600; opacity:0.9;">EMA ' + coin.signal.fastEMA.toFixed(4) + ' / ' + coin.signal.slowEMA.toFixed(4) + ' · RSI ' + coin.signal.rsi.toFixed(1) + ' · 15м ' + signalTime + '</div>';
                     }
                 } else {
-                    const pair = getArbPair(coin);
+                    const pair = arbPair;
                     card.className = 'coin-card'; card.style.backgroundColor = '#0c3c26'; 
-                    card.style.borderColor = idx === selectedCoinIndex ? '#f59e0b' : '#00b159';
-                    let timerText = '✅ Спред и цены стабильны 30с • BUY SPOT $' + pair.tradeVolume + ' / SHORT PERP $' + pair.tradeVolume;
-                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread arb-buy-exchange" style="background:rgba(255,255,255,0.2); color:#fff;">' + pair.buyExchange + ' Spot</span><span class="badge-short arb-sell-exchange" style="background:#f59e0b; color:#fff;">' + pair.sellExchange + ' Perp</span></div></div><div class="coin-price" style="color:#fff;">+' + pair.spread.toFixed(2) + '%</div><div class="coin-arb-summary" style="font-size:11px; font-weight:600; opacity:0.8; color:#fff;">' + timerText + ' • ' + formatMarketPrice(pair.buyPrice) + ' / ' + formatMarketPrice(pair.sellPrice) + '</div>';
+                    card.style.borderColor = idx === selectedCoinIndex ? '#f59e0b' : coin.arbStable ? '#00b159' : '#f59e0b';
+                    const status = '✅ Спред >0,50% стабилен 60с • BUY SPOT $' + pair.tradeVolume + ' / SHORT PERP $' + pair.tradeVolume;
+                    card.innerHTML = '<div class="coin-header"><div class="coin-name">' + coin.name + '</div><div style="display:flex; gap:3px;"><span class="badge-spread arb-buy-exchange" style="background:rgba(255,255,255,0.2); color:#fff;">' + pair.buyExchange + ' Spot</span><span class="badge-short arb-sell-exchange" style="background:#f59e0b; color:#fff;">' + pair.sellExchange + ' Perp</span></div></div><div class="coin-price" style="color:#fff;">+' + pair.spread.toFixed(2) + '%</div><div class="coin-arb-summary" style="font-size:11px; font-weight:600; opacity:0.8; color:#fff;">' + status + ' • ' + formatMarketPrice(pair.buyPrice) + ' / ' + formatMarketPrice(pair.sellPrice) + '</div>';
                 }
                 if (idx === selectedCoinIndex) card.classList.add('selected');
                 card.onclick = function() {
@@ -1058,11 +1076,17 @@
                 container.appendChild(card);
             });
             if (currentMode === 'arbitrage' && renderedCount === 0) {
-                container.innerHTML = '<div class="info-row">Пока нет стабильных связок. Жду 30 секунд стабильной цены и спреда.</div>';
+                const candidates = ALL_ARB_COINS.filter(function(coin) {
+                    const pair = getArbPair(coin);
+                    return pair && pair.spread >= ARB_MIN_SPREAD && !coin.arbStable;
+                }).length;
+                container.innerHTML = '<div class="info-row">' + (candidates
+                    ? 'Пока нет подтверждённых связок. Проверяю ' + candidates + ' кандидатов: спред должен быть выше 0,50% и колебаться не более чем на 0,10 процентного пункта в течение 60 секунд.'
+                    : 'Пока нет кандидатов с устойчивым положительным спредом выше 0,50%. Краткие скачки отфильтровываются; котировки старше 15 секунд исключаются.') + '</div>';
             }
         }
         function updateDetailBlock() {
-            const activeList = currentMode === 'signals' ? COINS : ALL_ARB_COINS;
+            const activeList = currentMode === 'signals' ? SIGNAL_COINS : ALL_ARB_COINS;
             const coin = activeList[selectedCoinIndex]; if (!coin) return;
             const deposit = parseFloat(document.getElementById('input-deposit').value) || 10;
             const riskPercent = parseFloat(document.getElementById('input-risk').value) || 1;
@@ -1096,16 +1120,26 @@
                 document.getElementById('slider-wrapper-zone').style.display = 'none'; document.getElementById('target-boxes-zone').style.display = 'none';
                 const pair = getArbPair(coin);
                 if (!coin.arbStable) {
-                    document.getElementById('det-name').innerText = 'Ожидание стабильной связки';
-                    document.getElementById('det-price').innerText = '—';
-                    document.getElementById('det-info-rows').innerText = 'Покажу пару после 30 секунд стабильной цены и спреда.';
+                    if (pair) {
+                        document.getElementById('det-name').innerText = coin.name + ' · сравнение цен';
+                        document.getElementById('det-price').innerText = (pair.spread > 0 ? '+' : '') + pair.spread.toFixed(2) + '%';
+                        document.getElementById('det-info-rows').innerHTML = pair.spread >= ARB_MIN_SPREAD
+                            ? '<div class="arb-status-card"><div class="arb-status-title">Котировки есть · проверяю кандидата</div><div>Предварительное сравнение последних цен: <b>' + pair.buyExchange + ' Spot</b> и <b>' + pair.sellExchange + ' Perpetual</b>.</div><div>Разница: <b>+' + pair.spread.toFixed(2) + '%</b>. Это пока не сигнал на сделку. Добавлю связку в список, только если разница останется выше 0,50% и будет колебаться не более чем на 0,10 процентного пункта в течение 60 секунд.</div></div>'
+                            : '<div class="arb-status-card"><div class="arb-status-title">Котировки есть · подходящей связки сейчас нет</div><div>Сравнение последних цен: <b>' + pair.buyExchange + ' Spot — ' + formatMarketPrice(pair.buyPrice) + '</b> и <b>' + pair.sellExchange + ' Perpetual — ' + formatMarketPrice(pair.sellPrice) + '</b>.</div><div>Разница: <b>' + (pair.spread > 0 ? '+' : '') + pair.spread.toFixed(3) + '%</b>. Для показа нужен положительный спред от 0,50%, стабильный в течение 60 секунд. Это сравнение последних цен, а не подтверждённая цена исполнения; краткие скачки отфильтровываются.</div></div>';
+                    } else {
+                        document.getElementById('det-name').innerText = coin.name + ' · ожидание цен';
+                        document.getElementById('det-price').innerText = '—';
+                        const spotCount = EXCHANGES.filter(function(exchange) { return freshQuote(coin, 'spot', exchange, Date.now()); }).length;
+                        const futuresCount = EXCHANGES.filter(function(exchange) { return freshQuote(coin, 'perpetual', exchange, Date.now()); }).length;
+                        document.getElementById('det-info-rows').innerHTML = '<div class="arb-status-card"><div class="arb-status-title">Пока недостаточно котировок для сравнения</div><div>Сейчас получены цены: Spot — <b>' + spotCount + ' бирж</b>, Perpetual — <b>' + futuresCount + ' бирж</b>.</div><div>Для связки нужны свежие цены обоих рынков на разных биржах. Цены по биржам показаны ниже; ожидание не означает, что найденный спред подходит для сделки.</div></div>';
+                    }
                     document.getElementById('trade-scheme').style.display = 'none';
                     return;
                 }
                 if (!pair) return;
                 const scheme = document.getElementById('trade-scheme');
                 scheme.style.display = 'block';
-                scheme.innerHTML = '<div class="trade-scheme-title">Схема сделки</div><div>Резерв на бирже: <strong>$' + pair.reservePerExchange + '</strong></div><div>Доля сделки: <strong>$' + pair.tradeVolume + '</strong> на каждую сторону</div><div>Расчётный профит при схлопывании к средней цене: <strong>$' + pair.expectedProfit.toFixed(4) + '</strong> до комиссий и funding</div><div>Оценка предполагает закрытие обеих ног по средней цене между входными котировками.</div>';
+                scheme.innerHTML = '<div class="trade-scheme-title">Устойчивая связка подтверждена</div><div>Предварительный план: Spot на <strong>' + pair.buyExchange + '</strong> и Short Perpetual на <strong>' + pair.sellExchange + '</strong>, ориентир <strong>$' + pair.tradeVolume + '</strong> на каждую сторону.</div><div>Расчёт при схождении цен: <strong>$' + pair.expectedProfit.toFixed(4) + '</strong> до комиссий и funding.</div><div>Используются последние цены, не bid/ask стакана. Это не ордер и не гарантия исполнения или прибыли; перед сделкой проверьте стакан, комиссии и funding.</div>';
                 document.getElementById('det-name').innerText = coin.name + ' · ' + pair.buyExchange + ' BUY / ' + pair.sellExchange + ' SHORT';
                 document.getElementById('det-price').innerText = '+' + pair.spread.toFixed(2) + '%';
                 document.getElementById('det-info-rows').innerHTML = '<div>Вход: <b style="color:#00b159;">BUY SPOT $' + pair.tradeVolume + '</b> на ' + pair.buyExchange + ' и <b style="color:#ff3b30;">SHORT PERPETUAL $' + pair.tradeVolume + '</b> на ' + pair.sellExchange + '.</div><div>Реальные котировки: ' + pair.buyExchange + ' Spot ' + formatMarketPrice(pair.buyPrice) + ' | ' + pair.sellExchange + ' Perp ' + formatMarketPrice(pair.sellPrice) + ' | спред ' + pair.spread.toFixed(2) + '%</div><div>Расчёт — ориентировочный: без комиссий, funding, проскальзывания и проверки глубины стакана.</div>';
@@ -1123,8 +1157,9 @@
             let stabilityChanged = false;
             ALL_ARB_COINS.forEach(function(coin) {
                 const wasStable = coin.arbStable;
+                const wasCandidate = Boolean(coin.arbCandidate);
                 updateArbStability(coin, Date.now());
-                if (wasStable !== coin.arbStable) stabilityChanged = true;
+                if (wasStable !== coin.arbStable || wasCandidate !== coin.arbCandidate) stabilityChanged = true;
             });
             if (currentMode === 'arbitrage' && stabilityChanged) {
                 renderGrid();
